@@ -95,7 +95,7 @@ export default function LoginPage() {
             const { profile } = await signIn(signInForm.email, signInForm.password);
 
             const redirectMap = {
-                patient: '/',
+                patient: '/patient/dashboard',
                 doctor: '/doctor/dashboard',
             };
 

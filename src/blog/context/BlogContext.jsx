@@ -242,9 +242,12 @@ export function BlogProvider({ children }) {
     const getPublishedPosts = useCallback(() =>
         posts.filter(p => p.status === 'published'), [posts]);
 
+    const myPosts = getMyPosts();
+    const publishedPosts = getPublishedPosts();
+
     return (
         <BlogContext.Provider value={{
-            posts, postsLoading, blogger, loading,
+            posts, postsLoading, blogger, loading, myPosts, publishedPosts,
             loginBlogger, logoutBlogger, updateBlogger,
             publishPost, saveDraft, updatePost, deletePost,
             getMyPosts, getPublishedPosts, refreshPosts: loadPosts,
