@@ -6,11 +6,6 @@ import { DoctorOnboardingModal } from './DoctorOnboardingModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, Stethoscope, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
-import { DoctorOnboardingModal } from './DoctorOnboardingModal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     NavigationMenu,
     NavigationMenuItem,
