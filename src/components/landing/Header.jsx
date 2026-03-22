@@ -246,26 +246,13 @@ export const Header = () => {
                                     transition={{ duration: 0.2 }}
                                     className="flex items-center"
                                 >
-
-                                    <div className="flex items-center">
-                                        {navLinks.map(link => (
-                                            <Link
-                                                key={link.name}
-                                                to={link.href}
-                                                onClick={() => handleNavClick(link.href)}
-                                                className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-foreground transition-colors hover:bg-primary/10"
-                                            >
-                                                {link.name}
-                                            </Link>
-                                        ))}
-                                    </div>
-
                                     <NavigationMenu>
                                         <NavigationMenuList>
                                             {navLinks.map(link => (
                                                 <NavigationMenuItem key={link.name}>
                                                     <Link
                                                         to={link.href}
+                                                        onClick={() => handleNavClick(link.href)}
                                                         className={cn(navigationMenuTriggerStyle(), "bg-transparent text-foreground hover:bg-primary/10 rounded-full font-medium")}
                                                     >
                                                         {link.name}
