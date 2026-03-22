@@ -2,11 +2,12 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, User, Stethoscope, Building2, ShieldCheck,
-    ChevronRight, ChevronLeft, Upload, CheckCircle2, AlertCircle
+    ChevronRight, ChevronLeft, Upload, CheckCircle2, AlertCircle, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/lib/supabase.js';
 
 /* ─── constants ─────────────────────────────────────────── */
 const SPECIALIZATIONS = [
@@ -428,17 +429,92 @@ export function DoctorOnboardingModal({ isOpen, onClose }) {
     const [errors, setErrors] = useState({});
     const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
 
     const onChange = useCallback((field, value) => {
         setData(prev => ({ ...prev, [field]: value }));
         setErrors(prev => { const e = { ...prev }; delete e[field]; return e; });
     }, []);
 
+    // Upload a single file to storage, returns the storage path or null
+    const uploadFile = async (file, folder, fieldName) => {
+        if (!file) return null;
+        const ext = file.name.split('.').pop();
+        const path = `${folder}/${fieldName}.${ext}`;
+        const { error } = await supabase.storage
+            .from('doctor-docs')
+            .upload(path, file, { upsert: true, contentType: file.type });
+        if (error) throw new Error(`Failed to upload ${fieldName}: ${error.message}`);
+        return path;
+    };
+
+    const handleSubmit = async () => {
+        setSubmitting(true);
+        setSubmitError('');
+        try {
+            const now = new Date().toISOString();
+            const emailSlug = data.email.trim().replace(/[^a-z0-9]/gi, '_');
+            const folder = `${emailSlug}_${Date.now()}`;
+
+            // Upload documents to Supabase Storage
+            const [govtIdPath, licenseDocPath, degreeCertPath] = await Promise.all([
+                uploadFile(data.govtId, folder, 'govt_id'),
+                uploadFile(data.licenseDoc, folder, 'license_doc'),
+                uploadFile(data.degreeCert, folder, 'degree_cert'),
+            ]);
+
+            const row = {
+                full_name: data.fullName.trim(),
+                email: data.email.trim(),
+                phone: data.phone.trim(),
+                dob: data.dob || null,
+                gender: data.gender || null,
+                license_no: data.licenseNo.trim(),
+                nmc_no: data.nmcNo.trim(),
+                specialization: data.specialization,
+                sub_specialization: data.subSpecialization || null,
+                degree: data.degree.trim(),
+                passing_year: data.passingYear ? Number(data.passingYear) : null,
+                institution: data.institution.trim(),
+                additional_qualifications: data.additionalQualifications || null,
+                experience: data.experience ? Number(data.experience) : 0,
+                consultation_fee: data.consultationFee ? Number(data.consultationFee) : 0,
+                clinic_name: data.clinicName.trim(),
+                clinic_address: data.clinicAddress.trim(),
+                city: data.city.trim(),
+                state: data.state,
+                languages: data.languages,
+                available_days: data.availableDays,
+                hours_from: data.hoursFrom,
+                hours_to: data.hoursTo,
+                status: 'Pending',
+                applied_at: now,
+                updated_at: now,
+                metadata: {
+                    documents: {
+                        govtId: govtIdPath,
+                        licenseDoc: licenseDocPath,
+                        degreeCert: degreeCertPath,
+                    },
+                    storageFolder: folder,
+                },
+            };
+            const { error } = await supabase.from('doctors').insert([row]);
+            if (error) throw new Error(error.message);
+            setSubmitted(true);
+        } catch (err) {
+            setSubmitError(err.message || 'Something went wrong. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const goNext = () => {
         const errs = validate(step, data);
         if (Object.keys(errs).length) { setErrors(errs); return; }
         setDirection(1);
-        if (step === 4) { setSubmitted(true); return; }
+        if (step === 4) { handleSubmit(); return; }
         setStep(s => s + 1);
         setErrors({});
     };
@@ -447,12 +523,13 @@ export function DoctorOnboardingModal({ isOpen, onClose }) {
         setDirection(-1);
         setStep(s => s - 1);
         setErrors({});
+        setSubmitError('');
     };
 
     const handleClose = () => {
         onClose();
         // reset after animation
-        setTimeout(() => { setStep(1); setData(initialData); setErrors({}); setSubmitted(false); }, 300);
+        setTimeout(() => { setStep(1); setData(initialData); setErrors({}); setSubmitted(false); setSubmitError(''); setSubmitting(false); }, 300);
     };
 
     const variants = {
@@ -550,18 +627,26 @@ export function DoctorOnboardingModal({ isOpen, onClose }) {
                                             </AnimatePresence>
                                         </div>
 
+                                        {/* Submit error */}
+                                        {submitError && (
+                                            <div className="mx-6 mb-2 flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
+                                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                                <span>{submitError}</span>
+                                            </div>
+                                        )}
+
                                         {/* Footer */}
                                         <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-card/80 backdrop-blur-sm flex-shrink-0 sticky bottom-0">
                                             <p className="text-xs text-muted-foreground">Step {step} of {STEPS.length}</p>
                                             <div className="flex gap-3">
                                                 {step > 1 && (
-                                                    <Button variant="outline" onClick={goBack} className="rounded-full gap-1">
+                                                    <Button variant="outline" onClick={goBack} disabled={submitting} className="rounded-full gap-1">
                                                         <ChevronLeft className="h-4 w-4" /> Back
                                                     </Button>
                                                 )}
-                                                <Button onClick={goNext} className="rounded-full gap-1 shadow-[0_8px_20px_hsl(var(--primary)/0.25)] hover:shadow-[0_8px_24px_hsl(var(--primary)/0.4)] transition-shadow">
-                                                    {step === 4 ? 'Submit Application' : 'Next'}
-                                                    {step < 4 && <ChevronRight className="h-4 w-4" />}
+                                                <Button onClick={goNext} disabled={submitting} className="rounded-full gap-1 shadow-[0_8px_20px_hsl(var(--primary)/0.25)] hover:shadow-[0_8px_24px_hsl(var(--primary)/0.4)] transition-shadow">
+                                                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</> : step === 4 ? 'Submit Application' : 'Next'}
+                                                    {!submitting && step < 4 && <ChevronRight className="h-4 w-4" />}
                                                 </Button>
                                             </div>
                                         </div>

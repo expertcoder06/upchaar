@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { SPECIALIZATIONS } from '@/lib/constants.js';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { fetchDoctors, updateDoctorStatus } from '@/lib/adminApi.js';
@@ -37,6 +37,8 @@ export default function DoctorManagement() {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [showAdd, setShowAdd] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_DOCTOR_FORM);
+    const [approving, setApproving] = useState(null); // doctorId being approved
+    const [docUrls, setDocUrls] = useState({}); // { govtId: url, licenseDoc: url, degreeCert: url }
 
     useEffect(() => {
         fetchDoctors()
@@ -93,10 +95,37 @@ export default function DoctorManagement() {
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
     const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    const handleApprove = (doc) => {
-        updateStatus(doc.id, 'Approved', { approvedAt: new Date().toISOString() });
-        showToast(`${doc.fullName} approved successfully ✓`);
-        if (selectedDoc?.id === doc.id) setSelectedDoc(p => ({ ...p, status: 'Approved' }));
+    const handleApprove = async (doc) => {
+        setApproving(doc.id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/approve-doctor`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`,
+                        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    },
+                    body: JSON.stringify({
+                        doctorId: doc.id,
+                        doctorEmail: doc.email,
+                        doctorName: doc.fullName,
+                    }),
+                }
+            );
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Approval failed');
+            const approvedAt = new Date().toISOString();
+            setDoctors(prev => prev.map(d => d.id === doc.id ? { ...d, status: 'Approved', approvedAt } : d));
+            if (selectedDoc?.id === doc.id) setSelectedDoc(p => ({ ...p, status: 'Approved', approvedAt }));
+            showToast(`${doc.fullName} approved ✓ — credentials emailed`);
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            setApproving(null);
+        }
     };
 
     const handleReject = () => {
@@ -248,9 +277,11 @@ export default function DoctorManagement() {
                                                 <Eye size={14} />
                                             </button>
                                             {doc.status === 'Pending' && (
-                                                <button onClick={() => handleApprove(doc)}
-                                                    className="h-8 w-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all" title="Approve">
-                                                    <CheckCircle size={14} />
+                                                <button onClick={() => handleApprove(doc)} disabled={approving === doc.id}
+                                                    className="h-8 w-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white disabled:opacity-50 transition-all" title="Approve">
+                                                    {approving === doc.id
+                                                        ? <span className="h-3 w-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                                                        : <CheckCircle size={14} />}
                                                 </button>
                                             )}
                                             {(doc.status === 'Pending' || doc.status === 'Approved') && (
@@ -379,22 +410,7 @@ export default function DoctorManagement() {
                                 ))}
 
                                 {/* Documents */}
-                                <div>
-                                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Uploaded Documents</h4>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[
-                                            { label: 'Govt ID', key: 'govtId' },
-                                            { label: 'License', key: 'licenseDoc' },
-                                            { label: 'Degree', key: 'degreeCert' },
-                                        ].map(({ label, key }) => (
-                                            <div key={key} className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center gap-1 hover:border-primary/40 hover:bg-primary/5 transition-colors cursor-pointer">
-                                                <FileText size={20} className="text-slate-300" />
-                                                <span className="text-[10px] text-slate-500 text-center">{label}</span>
-                                                <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">View <ExternalLink size={8} /></span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <DocumentViewer documents={selectedDoc.documents} supabase={supabase} />
 
                                 {/* Rejection reason if any */}
                                 {selectedDoc.rejectionReason && (
@@ -409,9 +425,11 @@ export default function DoctorManagement() {
                             {(selectedDoc.status === 'Pending' || selectedDoc.status === 'Approved') && (
                                 <div className="p-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
                                     {selectedDoc.status === 'Pending' && (
-                                        <button onClick={() => handleApprove(selectedDoc)}
-                                            className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
-                                            <CheckCircle size={15} /> Approve
+                                        <button onClick={() => handleApprove(selectedDoc)} disabled={approving === selectedDoc.id}
+                                            className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+                                            {approving === selectedDoc.id
+                                                ? <><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Approving…</>
+                                                : <><CheckCircle size={15} /> Approve</>}
                                         </button>
                                     )}
                                     <button onClick={() => setRejectModal({ open: true, doc: selectedDoc })}
@@ -542,6 +560,73 @@ export default function DoctorManagement() {
                     </motion.div>
                 )}
             </AnimatePresence>
+        </div>
+    );
+}
+
+/* ── Document Viewer Component ─────────────────────────── */
+function DocumentViewer({ documents = {}, supabase }) {
+    const [urls, setUrls] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    const DOCS = [
+        { label: 'Govt ID', key: 'govtId' },
+        { label: 'License', key: 'licenseDoc' },
+        { label: 'Degree', key: 'degreeCert' },
+    ];
+
+    useEffect(() => {
+        async function loadUrls() {
+            setLoading(true);
+            const entries = await Promise.all(
+                DOCS.map(async ({ label, key }) => {
+                    const path = documents?.[key];
+                    if (!path) return { key, label, url: null };
+                    const { data } = await supabase.storage
+                        .from('doctor-docs')
+                        .createSignedUrl(path, 3600);
+                    return { key, label, url: data?.signedUrl || null };
+                })
+            );
+            const map = {};
+            entries.forEach(e => { map[e.key] = e; });
+            setUrls(map);
+            setLoading(false);
+        }
+        loadUrls();
+    }, [JSON.stringify(documents)]);
+
+    return (
+        <div>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Uploaded Documents</h4>
+            <div className="grid grid-cols-3 gap-2">
+                {DOCS.map(({ label, key }) => {
+                    const entry = urls[key];
+                    const hasDoc = !!documents?.[key];
+                    const hasUrl = !!entry?.url;
+                    return (
+                        <a
+                            key={key}
+                            href={hasUrl ? entry.url : undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={!hasUrl ? (e) => e.preventDefault() : undefined}
+                            className={`rounded-xl border-2 border-dashed p-3 flex flex-col items-center gap-1 transition-colors no-underline
+                                ${hasUrl ? 'border-primary/40 bg-primary/5 hover:bg-primary/10 cursor-pointer' : 'border-slate-200 cursor-default'}`}
+                        >
+                            <FileText size={20} className={hasUrl ? 'text-primary' : 'text-slate-300'} />
+                            <span className="text-[10px] text-slate-500 text-center">{label}</span>
+                            {loading && hasDoc ? (
+                                <span className="text-[10px] text-slate-400">Loading…</span>
+                            ) : hasUrl ? (
+                                <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">View <ExternalLink size={8} /></span>
+                            ) : (
+                                <span className="text-[10px] text-slate-300">{hasDoc ? 'Error' : 'N/A'}</span>
+                            )}
+                        </a>
+                    );
+                })}
+            </div>
         </div>
     );
 }

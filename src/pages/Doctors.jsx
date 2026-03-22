@@ -4,88 +4,92 @@ import {
     MapPin,
     Search,
     Star,
-    Calendar,
     Filter,
     CheckCircle,
     ChevronRight,
     Heart,
     Clock,
-    Shield
+    Shield,
+    Loader2
 } from 'lucide-react';
 import {
     Card,
     CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-    CardDescription
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { doctors } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase.js';
 
 export default function DoctorsPage() {
+    const [allDoctors, setAllDoctors] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [location, setLocation] = useState('all');
-    const [filteredDoctors, setFilteredDoctors] = useState(doctors);
     const [selectedSpecialty, setSelectedSpecialty] = useState('All');
-    const [priceRange, setPriceRange] = useState([0, 3000]);
-
-    // Derived states for filtering
-    const specialties = ['All', ...new Set(doctors.map(d => d.specialty))];
+    const [priceRange, setPriceRange] = useState([0, 5000]);
 
     useEffect(() => {
-        const results = doctors.filter(doctor => {
-            const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesLocation = location === 'all' || doctor.location.toLowerCase().includes(location);
-            const matchesSpecialty = selectedSpecialty === 'All' || doctor.specialty === selectedSpecialty;
-            const matchesPrice = doctor.fees >= priceRange[0] && doctor.fees <= priceRange[1];
+        supabase
+            .from('doctors')
+            .select('*')
+            .eq('status', 'Approved')
+            .order('approved_at', { ascending: false })
+            .then(({ data, error }) => {
+                if (!error && data) {
+                    setAllDoctors(data.map(d => ({
+                        id: d.id,
+                        name: d.full_name,
+                        specialty: d.specialization,
+                        location: [d.clinic_name, d.city, d.state].filter(Boolean).join(', '),
+                        city: (d.city || '').toLowerCase(),
+                        availability: 'Available Today',
+                        avatar: d.avatar_url || null,
+                        experience: d.experience || 0,
+                        rating: Number(d.rating) || 4.5,
+                        reviews: d.total_appointments || 0,
+                        verified: true,
+                        fees: d.consultation_fee || 0,
+                        languages: d.languages || [],
+                    })));
+                }
+                setLoading(false);
+            });
+    }, []);
 
-            return matchesSearch && matchesLocation && matchesSpecialty && matchesPrice;
-        });
-        setFilteredDoctors(results);
-    }, [searchTerm, location, selectedSpecialty, priceRange]);
+    const specialties = ['All', ...new Set(allDoctors.map(d => d.specialty).filter(Boolean))];
+
+    const filteredDoctors = allDoctors.filter(doctor => {
+        const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesLocation = location === 'all' || doctor.city.includes(location);
+        const matchesSpecialty = selectedSpecialty === 'All' || doctor.specialty === selectedSpecialty;
+        const matchesPrice = doctor.fees >= priceRange[0] && doctor.fees <= priceRange[1];
+        return matchesSearch && matchesLocation && matchesSpecialty && matchesPrice;
+    });
 
     const containerVariants = {
         hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
+        visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
     };
 
     const itemVariants = {
         hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: {
-                type: "spring",
-                stiffness: 100
-            }
-        }
+        visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }
     };
 
     return (
         <div className="min-h-screen bg-gray-50/50">
-            {/* 1. Hero Section */}
+            {/* Hero */}
             <section className="relative overflow-hidden bg-gradient-to-br from-teal-600 to-emerald-800 text-white pb-32 pt-20">
                 <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
                 <div className="container mx-auto px-4 relative z-10 text-center">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
                         <Badge variant="outline" className="mb-4 text-white border-white/30 px-4 py-1.5 uppercase tracking-wider text-xs">
                             Trusted Healthcare
                         </Badge>
@@ -93,34 +97,20 @@ export default function DoctorsPage() {
                             Find the Right Doctor,<br /> Right When You Need One.
                         </h1>
                         <p className="text-xl text-teal-100 max-w-2xl mx-auto mb-10 font-light">
-                            Connect with top-rated specialists, book verified appointments, and get the care you deserve.
+                            Connect with verified specialists, book appointments, and get the care you deserve.
                         </p>
-
                         <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-teal-50">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="w-5 h-5 text-teal-300" />
-                                <span className="font-semibold">500+ Verified Doctors</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="w-5 h-5 text-teal-300" />
-                                <span className="font-semibold">20+ Specialties</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="w-5 h-5 text-teal-300" />
-                                <span className="font-semibold">10k+ Happy Patients</span>
-                            </div>
+                            <div className="flex items-center gap-2"><CheckCircle className="w-5 h-5 text-teal-300" /><span className="font-semibold">Verified Doctors</span></div>
+                            <div className="flex items-center gap-2"><CheckCircle className="w-5 h-5 text-teal-300" /><span className="font-semibold">Multiple Specialties</span></div>
+                            <div className="flex items-center gap-2"><CheckCircle className="w-5 h-5 text-teal-300" /><span className="font-semibold">Instant Booking</span></div>
                         </div>
                     </motion.div>
                 </div>
             </section>
 
-            {/* 2. Smart Search Section - Overlapping Hero */}
+            {/* Search */}
             <div className="container mx-auto px-4 -mt-24 relative z-20">
-                <motion.div
-                    initial={{ opacity: 0, y: 40 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.6 }}
-                >
+                <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
                     <Card className="shadow-2xl border-0 ring-1 ring-black/5">
                         <CardContent className="p-6 md:p-8">
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
@@ -173,17 +163,12 @@ export default function DoctorsPage() {
                                     </Button>
                                 </div>
                             </div>
-
-                            {/* Quick Chips */}
                             <div className="mt-6 flex flex-wrap gap-2 items-center">
                                 <span className="text-sm text-muted-foreground mr-2">Popular:</span>
                                 {['Cardiologist', 'Dentist', 'Pediatrician', 'Neurologist'].map((chip) => (
-                                    <Badge
-                                        key={chip}
-                                        variant="secondary"
+                                    <Badge key={chip} variant="secondary"
                                         className="cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors px-3 py-1"
-                                        onClick={() => setSearchTerm(chip)}
-                                    >
+                                        onClick={() => setSearchTerm(chip)}>
                                         {chip}
                                     </Badge>
                                 ))}
@@ -194,132 +179,115 @@ export default function DoctorsPage() {
             </div>
 
             <div className="container mx-auto px-4 py-16 grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* 5. Filters (Desktop Sidebar) */}
+                {/* Filters Sidebar */}
                 <div className="hidden lg:block lg:col-span-3 space-y-6">
                     <div className="sticky top-24">
                         <div className="flex items-center gap-2 mb-6">
                             <Filter className="h-5 w-5 text-primary" />
                             <h3 className="font-bold text-lg">Filters</h3>
                         </div>
-
                         <div className="space-y-6">
                             <div className="space-y-3">
                                 <label className="text-sm font-medium">Availability</label>
                                 <div className="space-y-2">
                                     <div className="flex items-center space-x-2">
                                         <Checkbox id="today" />
-                                        <label htmlFor="today" className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                            Available Today
-                                        </label>
+                                        <label htmlFor="today" className="text-sm leading-none">Available Today</label>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <Checkbox id="tomorrow" />
-                                        <label htmlFor="tomorrow" className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                            Available Tomorrow
-                                        </label>
+                                        <label htmlFor="tomorrow" className="text-sm leading-none">Available Tomorrow</label>
                                     </div>
                                 </div>
                             </div>
-
                             <div className="space-y-3">
                                 <label className="text-sm font-medium">Consultation Fee</label>
-                                <Slider
-                                    defaultValue={[0, 3000]}
-                                    max={5000}
-                                    step={100}
-                                    className="py-4"
-                                    onValueChange={setPriceRange}
-                                />
+                                <Slider defaultValue={[0, 5000]} max={5000} step={100} className="py-4" onValueChange={setPriceRange} />
                                 <div className="flex justify-between text-xs text-muted-foreground">
                                     <span>₹{priceRange[0]}</span>
                                     <span>₹{priceRange[1]}+</span>
                                 </div>
                             </div>
-
                             <div className="space-y-3">
                                 <label className="text-sm font-medium">Gender</label>
                                 <div className="space-y-2">
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="male" />
-                                        <label htmlFor="male" className="text-sm">Male Doctor</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="female" />
-                                        <label htmlFor="female" className="text-sm">Female Doctor</label>
-                                    </div>
+                                    <div className="flex items-center space-x-2"><Checkbox id="male" /><label htmlFor="male" className="text-sm">Male Doctor</label></div>
+                                    <div className="flex items-center space-x-2"><Checkbox id="female" /><label htmlFor="female" className="text-sm">Female Doctor</label></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* 4. Doctor Cards Grid */}
+                {/* Doctor Cards Grid */}
                 <div className="lg:col-span-9">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold font-headline">Top Recommendations</h2>
-                        <span className="text-muted-foreground text-sm">{filteredDoctors.length} doctors found</span>
+                        <h2 className="text-2xl font-bold font-headline">
+                            {loading ? 'Loading Doctors…' : 'Verified Doctors'}
+                        </h2>
+                        {!loading && (
+                            <span className="text-muted-foreground text-sm">{filteredDoctors.length} doctors found</span>
+                        )}
                     </div>
 
-                    <motion.div
-                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                    >
-                        <AnimatePresence>
-                            {filteredDoctors.length > 0 ? (
-                                filteredDoctors.map((doctor) => (
-                                    <motion.div key={doctor.id} variants={itemVariants} layout>
-                                        <DoctorCard doctor={doctor} />
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-24 gap-4">
+                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                            <p className="text-muted-foreground text-sm">Fetching verified doctors…</p>
+                        </div>
+                    ) : (
+                        <motion.div
+                            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="visible"
+                        >
+                            <AnimatePresence>
+                                {filteredDoctors.length > 0 ? (
+                                    filteredDoctors.map((doctor) => (
+                                        <motion.div key={doctor.id} variants={itemVariants} layout>
+                                            <DoctorCard doctor={doctor} />
+                                        </motion.div>
+                                    ))
+                                ) : (
+                                    <motion.div className="col-span-full py-12 text-center">
+                                        <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
+                                            <Search className="h-10 w-10 text-muted-foreground" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold">No doctors found</h3>
+                                        <p className="text-muted-foreground">Try adjusting your search or filters.</p>
+                                        <Button variant="link" onClick={() => { setSearchTerm(''); setLocation('all'); }} className="mt-2 text-primary">
+                                            Clear all filters
+                                        </Button>
                                     </motion.div>
-                                ))
-                            ) : (
-                                <motion.div className="col-span-full py-12 text-center">
-                                    <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
-                                        <Search className="h-10 w-10 text-muted-foreground" />
-                                    </div>
-                                    <h3 className="text-lg font-semibold">No doctors found</h3>
-                                    <p className="text-muted-foreground">Try adjusting your search or filters.</p>
-                                    <Button variant="link" onClick={() => { setSearchTerm(''); setLocation('all'); }} className="mt-2 text-primary">
-                                        Clear all filters
-                                    </Button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
                 </div>
             </div>
 
-            {/* 6. Trust Section */}
+            {/* Trust Section */}
             <section className="bg-white py-20 border-t">
                 <div className="container mx-auto px-4">
                     <div className="text-center max-w-2xl mx-auto mb-16">
                         <h2 className="text-3xl font-bold font-headline mb-4">Why Patients Trust Sanjiwani</h2>
                         <p className="text-muted-foreground">We prioritize your health and convenience. Our rigorous verification process ensures you only see the best.</p>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-teal-50/50 hover:bg-teal-50 transition-colors">
-                            <div className="h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-6 text-teal-600">
-                                <Shield className="h-8 w-8" />
+                        {[
+                            { icon: Shield, title: '100% Verified Doctors', desc: 'Every doctor on our platform undergoes a strict verification process for credentials and experience.' },
+                            { icon: Clock, title: 'Instant Booking', desc: 'Book confirmed appointments in seconds. No waiting in queues or calling clinics.' },
+                            { icon: Heart, title: 'Patient-First Care', desc: 'Read real reviews from other patients to choose the doctor that\'s right for you.' },
+                        ].map(({ icon: Icon, title, desc }) => (
+                            <div key={title} className="flex flex-col items-center text-center p-6 rounded-2xl bg-teal-50/50 hover:bg-teal-50 transition-colors">
+                                <div className="h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-6 text-teal-600">
+                                    <Icon className="h-8 w-8" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-3">{title}</h3>
+                                <p className="text-muted-foreground">{desc}</p>
                             </div>
-                            <h3 className="text-xl font-bold mb-3">100% Verified Doctors</h3>
-                            <p className="text-muted-foreground">Every doctor on our platform undergoes a strict verification process for credentials and experience.</p>
-                        </div>
-                        <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-teal-50/50 hover:bg-teal-50 transition-colors">
-                            <div className="h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-6 text-teal-600">
-                                <Clock className="h-8 w-8" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-3">Instant Booking</h3>
-                            <p className="text-muted-foreground">Book confirmed appointments in seconds. No waiting in queues or calling clinics.</p>
-                        </div>
-                        <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-teal-50/50 hover:bg-teal-50 transition-colors">
-                            <div className="h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-6 text-teal-600">
-                                <Heart className="h-8 w-8" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-3">Patient-First Care</h3>
-                            <p className="text-muted-foreground">Read real reviews from other patients to choose the doctor that's right for you.</p>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </section>
@@ -329,17 +297,22 @@ export default function DoctorsPage() {
 
 function DoctorCard({ doctor }) {
     const navigate = useNavigate();
+    const initials = (doctor.name || '').replace(/Dr\.\s?/, '').charAt(0).toUpperCase();
+
     return (
         <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 group ring-1 ring-slate-100">
             <CardContent className="p-0">
                 <div className="flex p-5 gap-4">
                     <div className="relative shrink-0">
                         <div className="h-24 w-24 rounded-full p-[2px] bg-gradient-to-br from-teal-400 to-emerald-500">
-                            <img
-                                src={doctor.avatar}
-                                alt={doctor.name}
-                                className="h-full w-full rounded-full object-cover border-2 border-white bg-white"
-                            />
+                            {doctor.avatar ? (
+                                <img src={doctor.avatar} alt={doctor.name}
+                                    className="h-full w-full rounded-full object-cover border-2 border-white bg-white" />
+                            ) : (
+                                <div className="h-full w-full rounded-full border-2 border-white bg-white flex items-center justify-center text-2xl font-bold text-teal-600">
+                                    {initials}
+                                </div>
+                            )}
                         </div>
                         {doctor.verified && (
                             <div className="absolute bottom-0 right-0 bg-blue-500 text-white p-1 rounded-full border-2 border-white" title="Verified Doctor">
@@ -366,7 +339,6 @@ function DoctorCard({ doctor }) {
                                 <span className="line-clamp-1">{doctor.location}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <Briefcase className="h-3.5 w-3.5" />
                                 <span>{doctor.experience} years exp.</span>
                             </div>
                             <div className="flex items-center gap-1.5 font-medium text-gray-700">
@@ -386,14 +358,14 @@ function DoctorCard({ doctor }) {
                     </div>
 
                     <div className="flex items-center gap-2 mt-2">
-                        <Button 
+                        <Button
                             className="flex-1 bg-primary hover:bg-teal-700 group-hover:shadow-lg transition-all"
                             onClick={() => navigate(`/doctors/${doctor.id}`)}
                         >
                             Book Appointment
                         </Button>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="px-3 border-primary/20 hover:bg-primary/5 text-primary"
                             onClick={() => navigate(`/doctors/${doctor.id}`)}
                         >
@@ -402,38 +374,11 @@ function DoctorCard({ doctor }) {
                     </div>
 
                     <div className="mt-3 flex items-center gap-2 text-xs font-medium">
-                        <div className={cn(
-                            "h-2 w-2 rounded-full",
-                            doctor.availability === 'Available Today' ? "bg-green-500" : "bg-orange-500"
-                        )}></div>
-                        <span className={cn(
-                            doctor.availability === 'Available Today' ? "text-green-700" : "text-orange-700"
-                        )}>
-                            {doctor.availability}
-                        </span>
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                        <span className="text-green-700">Available Today</span>
                     </div>
                 </div>
             </CardContent>
         </Card>
     );
-}
-
-function Briefcase(props) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-        </svg>
-    )
 }

@@ -1,13 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
+
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, Stethoscope, UserCircle, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { DoctorOnboardingModal } from './DoctorOnboardingModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Menu, X, Stethoscope, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
+import { DoctorOnboardingModal } from './DoctorOnboardingModal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    NavigationMenu,
+    NavigationMenuItem,
+    NavigationMenuList,
+    navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/auth/AuthContext.jsx';
+import { usePatient } from '@/patient/context/PatientContext.jsx';
 
 // ── Helper: get user's initials from full name ────────────
 function getInitials(name) {
@@ -50,6 +65,7 @@ export const Header = () => {
     const location = useLocation();
 
     const { user, profile, signOut, loading } = useAuth();
+    const { signOut: patientSignOut } = usePatient();
     const isLoggedIn = !loading && !!user && !!profile;
 
     // Close profile dropdown on outside click
@@ -80,7 +96,9 @@ export const Header = () => {
     const handleSignOut = async () => {
         setIsProfileOpen(false);
         setIsMenuOpen(false);
+        // Sign out from both AuthContext (Supabase session) and PatientContext (local state)
         await signOut();
+        await patientSignOut();
         navigate('/');
     };
 
@@ -107,7 +125,7 @@ export const Header = () => {
 
     const navLinks = [
         { href: '/', name: 'Home' },
-        { href: '/dashboard', name: 'My Appointments' },
+        { href: '/patient/dashboard', name: 'My Appointments' },
         { href: '/blogs', name: 'Blog' },
         { href: '#features', name: 'Our Services' },
     ];
@@ -233,6 +251,7 @@ export const Header = () => {
                                     transition={{ duration: 0.2 }}
                                     className="flex items-center"
                                 >
+
                                     <div className="flex items-center">
                                         {navLinks.map(link => (
                                             <Link
@@ -245,6 +264,22 @@ export const Header = () => {
                                             </Link>
                                         ))}
                                     </div>
+
+                                    <NavigationMenu>
+                                        <NavigationMenuList>
+                                            {navLinks.map(link => (
+                                                <NavigationMenuItem key={link.name}>
+                                                    <Link
+                                                        to={link.href}
+                                                        className={cn(navigationMenuTriggerStyle(), "bg-transparent text-foreground hover:bg-primary/10 rounded-full font-medium")}
+                                                    >
+                                                        {link.name}
+                                                    </Link>
+                                                </NavigationMenuItem>
+                                            ))}
+                                        </NavigationMenuList>
+                                    </NavigationMenu>
+
                                     <Button onClick={() => setIsSearchOpen(true)} variant="ghost" size="icon" className="rounded-full text-primary hover:bg-primary/10 hover:text-primary">
                                         <Search className="h-5 w-5" />
                                     </Button>

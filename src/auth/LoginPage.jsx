@@ -25,14 +25,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { isStrongPassword, PASSWORD_RULE_MESSAGE } from '@/lib/auth.js';
 import {
     Heart, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle,
-    User, Phone, ChevronDown, Stethoscope, Building2,
+    User, Phone, ChevronDown, Building2,
     Pill, HospitalIcon, Users, CheckCircle2
 } from 'lucide-react';
 
 // ── Profile type options shown in the Sign Up dropdown ──
 const PROFILE_TYPES = [
     { value: 'patient', label: 'Patient', icon: Users, desc: 'Book appointments, manage records' },
-    { value: 'doctor', label: 'Doctor', icon: Stethoscope, desc: 'Manage patients & appointments' },
     { value: 'clinic', label: 'Clinic', icon: Building2, desc: 'Register your clinic' },
     { value: 'medical', label: 'Medical Store', icon: Pill, desc: 'List medicines & supplies' },
     { value: 'hospital', label: 'Hospital', icon: HospitalIcon, desc: 'Register your hospital' },
@@ -454,13 +453,7 @@ export default function LoginPage() {
                                     </div>
                                 </div>
 
-                                {/* Doctor pending notice */}
-                                {signUpForm.profileType === 'doctor' && (
-                                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
-                                        <Stethoscope size={14} className="flex-shrink-0 mt-0.5" />
-                                        Doctor accounts are reviewed before activation. You'll be notified once approved.
-                                    </div>
-                                )}
+
 
                                 <button
                                     type="submit" disabled={loading}

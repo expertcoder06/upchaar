@@ -79,7 +79,8 @@ function PostCard({ post, featured = false }) {
 }
 
 export default function Blogs() {
-    const { publishedPosts } = useBlog();
+    const { getPublishedPosts } = useBlog();
+    const publishedPosts = getPublishedPosts();
     const [activeCategory, setActiveCategory] = useState('All');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);

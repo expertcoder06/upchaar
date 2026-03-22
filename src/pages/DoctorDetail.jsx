@@ -1,35 +1,82 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { doctors } from '@/lib/data';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-    MapPin, 
-    Star, 
-    CalendarDays, 
-    CheckCircle, 
-    Shield, 
-    Briefcase, 
-    Video, 
-    ArrowLeft
+    MapPin,
+    Star,
+    CalendarDays,
+    CheckCircle,
+    Shield,
+    Briefcase,
+    Video,
+    ArrowLeft,
+    Loader2
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase.js';
 
 export default function DoctorDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    
-    // Find the doctor: matching string or number IDs
-    const doctor = doctors.find(d => String(d.id) === String(id));
 
+    const [doctor, setDoctor] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [selectedSlot, setSelectedSlot] = useState('');
+
+    useEffect(() => {
+        supabase
+            .from('doctors')
+            .select('*')
+            .eq('id', id)
+            .eq('status', 'Approved')
+            .single()
+            .then(({ data, error }) => {
+                if (!error && data) {
+                    setDoctor({
+                        id: data.id,
+                        name: data.full_name,
+                        specialty: data.specialization,
+                        subSpecialty: data.sub_specialization,
+                        location: [data.clinic_name, data.clinic_address, data.city, data.state].filter(Boolean).join(', '),
+                        avatar: data.avatar_url || null,
+                        experience: data.experience || 0,
+                        rating: Number(data.rating) || 4.5,
+                        reviews: data.total_appointments || 0,
+                        verified: true,
+                        fees: data.consultation_fee || 0,
+                        languages: data.languages || [],
+                        availableDays: data.available_days || [],
+                        hoursFrom: data.hours_from || '09:00',
+                        hoursTo: data.hours_to || '17:00',
+                        licenseNo: data.license_no,
+                        nmcNo: data.nmc_no,
+                        degree: data.degree,
+                        institution: data.institution,
+                        city: data.city,
+                    });
+                }
+                setLoading(false);
+            });
+    }, [id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-teal-50/30">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-teal-600" />
+                    <p className="text-muted-foreground text-sm">Loading doctor profile…</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!doctor) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50/50">
                 <div className="text-center space-y-4">
                     <h2 className="text-2xl font-bold font-headline">Doctor not found</h2>
-                    <p className="text-muted-foreground">The profile you are looking for does not exist.</p>
+                    <p className="text-muted-foreground">This profile does not exist or is not yet approved.</p>
                     <Button onClick={() => navigate('/doctors')} className="mt-4 bg-teal-600 hover:bg-teal-700">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back to Doctors
                     </Button>
@@ -38,16 +85,17 @@ export default function DoctorDetailPage() {
         );
     }
 
+    const initials = (doctor.name || '').replace(/Dr\.\s?/, '').charAt(0).toUpperCase();
+
     return (
         <div className="min-h-screen bg-teal-50/30 font-sans pb-20">
             <div className="container mx-auto px-4 py-8">
-                {/* Back button */}
                 <Button variant="ghost" className="mb-6 hover:bg-teal-50 text-teal-800" onClick={() => navigate('/doctors')}>
                     <ArrowLeft className="w-4 h-4 mr-2" /> Back to Doctors
                 </Button>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                    {/* Left Column: Doctor Profile */}
+                    {/* Left Column: Profile */}
                     <div className="lg:col-span-2 space-y-6">
                         <Card className="border-0 shadow-lg ring-1 ring-black/5 overflow-hidden rounded-2xl bg-white">
                             <CardContent className="p-8">
@@ -55,11 +103,14 @@ export default function DoctorDetailPage() {
                                     {/* Avatar */}
                                     <div className="relative shrink-0">
                                         <div className="h-32 w-32 md:h-40 md:w-40 rounded-2xl p-1 bg-gradient-to-br from-teal-400 to-emerald-500 shadow-md">
-                                            <img
-                                                src={doctor.avatar}
-                                                alt={doctor.name}
-                                                className="h-full w-full rounded-xl object-cover border-4 border-white bg-white"
-                                            />
+                                            {doctor.avatar ? (
+                                                <img src={doctor.avatar} alt={doctor.name}
+                                                    className="h-full w-full rounded-xl object-cover border-4 border-white bg-white" />
+                                            ) : (
+                                                <div className="h-full w-full rounded-xl border-4 border-white bg-white flex items-center justify-center text-4xl font-bold text-teal-600">
+                                                    {initials}
+                                                </div>
+                                            )}
                                         </div>
                                         {doctor.verified && (
                                             <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white p-1.5 rounded-full border-4 border-white shadow-sm" title="Verified Doctor">
@@ -79,40 +130,39 @@ export default function DoctorDetailPage() {
                                                 </div>
                                             </div>
                                             <p className="text-teal-600 font-semibold text-lg mt-1">{doctor.specialty}</p>
+                                            {doctor.subSpecialty && <p className="text-gray-400 text-sm">{doctor.subSpecialty}</p>}
                                             <p className="text-gray-500 mt-2 flex items-center gap-2 font-medium">
                                                 <MapPin className="h-4 w-4 text-gray-400" /> {doctor.location}
                                             </p>
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5 border-t border-gray-100/80 text-sm text-gray-600">
+                                            {doctor.licenseNo && (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2.5 bg-teal-50 text-teal-600 rounded-lg shadow-sm"><Shield className="h-4 w-4" /></div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">License</p>
+                                                        <p className="font-semibold text-gray-700">{doctor.licenseNo}</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2.5 bg-teal-50 text-teal-600 rounded-lg shadow-sm">
-                                                    <Shield className="h-4 w-4" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">License</p>
-                                                    <p className="font-semibold text-gray-700">DOC-{Math.floor(Math.random() * 90000) + 10000}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2.5 bg-teal-50 text-teal-600 rounded-lg shadow-sm">
-                                                    <Briefcase className="h-4 w-4" />
-                                                </div>
+                                                <div className="p-2.5 bg-teal-50 text-teal-600 rounded-lg shadow-sm"><Briefcase className="h-4 w-4" /></div>
                                                 <div>
                                                     <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Experience</p>
                                                     <p className="font-semibold text-gray-700">{doctor.experience} Years</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="flex gap-2 pt-3 flex-wrap">
-                                            {doctor.languages && doctor.languages.map((lang, idx) => (
+                                            {doctor.languages.map((lang, idx) => (
                                                 <Badge key={idx} variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium px-3 py-1 rounded-full">{lang}</Badge>
                                             ))}
-                                            {(!doctor.languages || doctor.languages.length === 0) && (
+                                            {doctor.languages.length === 0 && (
                                                 <>
-                                                    <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium px-3 py-1 rounded-full">English</Badge>
-                                                    <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium px-3 py-1 rounded-full">Hindi</Badge>
+                                                    <Badge variant="secondary" className="bg-gray-100 text-gray-700 font-medium px-3 py-1 rounded-full">English</Badge>
+                                                    <Badge variant="secondary" className="bg-gray-100 text-gray-700 font-medium px-3 py-1 rounded-full">Hindi</Badge>
                                                 </>
                                             )}
                                         </div>
@@ -120,6 +170,21 @@ export default function DoctorDetailPage() {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* Availability info */}
+                        {doctor.availableDays.length > 0 && (
+                            <Card className="border-0 shadow-sm ring-1 ring-black/5 rounded-2xl bg-white">
+                                <CardContent className="p-6">
+                                    <h3 className="font-semibold text-gray-800 mb-3">Availability</h3>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        {doctor.availableDays.map(day => (
+                                            <Badge key={day} variant="secondary" className="bg-teal-50 text-teal-700 border-teal-100">{day}</Badge>
+                                        ))}
+                                    </div>
+                                    <p className="text-sm text-gray-500">{doctor.hoursFrom} – {doctor.hoursTo}</p>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
 
                     {/* Right Column: Booking Widget */}
@@ -141,19 +206,18 @@ export default function DoctorDetailPage() {
                                     <CalendarDays className="h-5 w-5" />
                                     <h3 className="tracking-tight text-lg">In-Clinic Appointment</h3>
                                 </div>
-                                
                                 <div className="space-y-3">
                                     <p className="text-[13px] text-gray-500 font-semibold text-center bg-gray-50 py-1.5 rounded-full">
                                         Select Date & Time (Today)
                                     </p>
                                     <div className="grid grid-cols-2 gap-3 mt-4">
                                         {['09:00 AM', '11:30 AM', '02:00 PM', '04:30 PM'].map((time) => (
-                                            <Button 
-                                                key={time} 
+                                            <Button
+                                                key={time}
                                                 variant={selectedSlot === time ? 'default' : 'outline'}
-                                                className={selectedSlot === time 
-                                                    ? "bg-teal-600 hover:bg-teal-700 shadow-md font-semibold text-white ring-1 ring-teal-700" 
-                                                    : "border-gray-200 hover:border-teal-600 hover:bg-teal-50 hover:text-teal-700 text-gray-600 font-medium"
+                                                className={selectedSlot === time
+                                                    ? 'bg-teal-600 hover:bg-teal-700 shadow-md font-semibold text-white ring-1 ring-teal-700'
+                                                    : 'border-gray-200 hover:border-teal-600 hover:bg-teal-50 hover:text-teal-700 text-gray-600 font-medium'
                                                 }
                                                 onClick={() => setSelectedSlot(time)}
                                             >
@@ -162,7 +226,6 @@ export default function DoctorDetailPage() {
                                         ))}
                                     </div>
                                 </div>
-
                                 <Button className="w-full mt-2 bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-600/20 h-12 text-base font-bold transition-all">
                                     Book In-Clinic Visit
                                 </Button>
