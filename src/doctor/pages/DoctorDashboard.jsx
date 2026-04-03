@@ -32,21 +32,26 @@ const STATUS_CONFIG = {
 };
 
 export default function DoctorDashboard() {
-    const { doctor } = useDoctor();
+    const { doctor, doctorRecord } = useDoctor();
     const [selectedApt, setSelectedApt] = useState(null);
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!doctor?.id) return;
+        if (!doctorRecord?.id) {
+            setAppointments([]);
+            setLoading(false);
+            return;
+        }
+
         const fetchApts = async () => {
             try {
-                // Fetch today's appointments for this doctor. In a real scenario we filter by date.
                 const { data } = await supabase
                     .from('appointments')
                     .select('*')
-                    .eq('doctor_id', doctor.id)
-                    .order('date', { ascending: false });
+                    .eq('doctor_id', doctorRecord.id)
+                    .order('date', { ascending: true })
+                    .order('time_slot', { ascending: true });
                 setAppointments(data || []);
             } catch (err) {
                 console.error('Failed to load doctor appointments');
@@ -55,7 +60,7 @@ export default function DoctorDashboard() {
             }
         };
         fetchApts();
-    }, [doctor]);
+    }, [doctorRecord?.id]);
 
     // Stats calculations
     const completedCount = appointments.filter(a => a.status === 'Completed').length;
@@ -65,7 +70,7 @@ export default function DoctorDashboard() {
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-8">
             {/* Pending approval banner */}
-            {doctor.status === 'Pending' && (
+            {doctorRecord?.status === 'Pending' && (
                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-3 p-4 rounded-3xl bg-amber-50 border border-amber-200 shadow-sm">
                     <AlertCircle size={20} className="text-amber-500 flex-shrink-0" />
