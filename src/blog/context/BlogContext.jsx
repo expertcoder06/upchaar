@@ -8,7 +8,7 @@
  * with Supabase auth state changes.
  * ─────────────────────────────────────────────────
  */
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase.js';
 import { BLOG_CATEGORIES, COVER_GRADIENTS } from '@/lib/constants.js';
 import { withAuthTimeout } from '@/lib/auth.js';
@@ -254,8 +254,34 @@ export function BlogProvider({ children }) {
     const getMyPosts = useCallback(() =>
         blogger ? posts.filter(p => p.author_id === blogger.id) : [], [posts, blogger]);
 
-    const getPublishedPosts = useCallback(() =>
+    const publishedPosts = useMemo(() =>
         posts.filter(p => p.status === 'published'), [posts]);
+
+    const getPublishedPosts = useCallback(() => publishedPosts, [publishedPosts]);
+
+    const likePost = async (postId) => {
+        try {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+            const newLikes = (post.likes || 0) + 1;
+            setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: newLikes } : p));
+            await supabase.from('posts').update({ likes: newLikes }).eq('id', postId);
+        } catch (e) {
+            console.warn('like post error', e);
+        }
+    };
+
+    const incrementViews = async (postId) => {
+        try {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+            const newViews = (post.views || 0) + 1;
+            setPosts(prev => prev.map(p => p.id === postId ? { ...p, views: newViews } : p));
+            await supabase.from('posts').update({ views: newViews }).eq('id', postId);
+        } catch (e) {
+            console.warn('increment views error', e);
+        }
+    };
 
     return (
         <BlogContext.Provider value={{
@@ -263,6 +289,7 @@ export function BlogProvider({ children }) {
             loginBlogger, logoutBlogger, updateBlogger,
             publishPost, saveDraft, updatePost, deletePost,
             getMyPosts, getPublishedPosts, refreshPosts: loadPosts,
+            publishedPosts, likePost, incrementViews,
         }}>
             {children}
         </BlogContext.Provider>

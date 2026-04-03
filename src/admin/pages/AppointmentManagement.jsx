@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { fetchAppointments } from '@/lib/adminApi.js';
 import { Search, ChevronLeft, ChevronRight, TrendingUp, Calendar, IndianRupee } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -110,28 +110,30 @@ export default function AppointmentManagement() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            <tr key={apt.id} className="hover:bg-slate-50/70 transition-colors">
-                                <td className="px-4 py-3 text-xs text-slate-400 font-mono">{apt.id}</td>
-                                <td className="px-4 py-3 font-medium text-slate-800 whitespace-nowrap">{apt.patientName || 'Unknown Patient'}</td>
-                                <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{apt.doctorName || 'Dr. Unknown'}</td>
-                                <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{apt.specialization || 'General'}</td>
-                                <td className="px-4 py-3 text-slate-600 whitespace-nowrap text-xs">
-                                    <p>{format(new Date(apt.date), 'dd MMM yyyy')}</p>
-                                    <p className="text-slate-400">{apt.time_slot || apt.timeSlot}</p>
-                                </td>
-                                <td className="px-4 py-3 text-slate-500 text-xs">{apt.consultation_type || apt.type || 'Online'}</td>
-                                <td className="px-4 py-3">
-                                    <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border', STATUS_STYLES[apt.status === 'Scheduled' ? 'Pending' : apt.status] || STATUS_STYLES['Pending'])}>
-                                        {apt.status === 'Scheduled' ? 'Pending' : apt.status}
-                                    </span>
-                                </td>
-                                <td className="px-4 py-3 text-slate-700 font-semibold">₹{apt.fee || 0}</td>
-                                <td className="px-4 py-3">
-                                    <span className={cn('font-semibold', ((apt.fee || 0) * 0.1) > 0 ? 'text-emerald-600' : 'text-slate-300')}>
-                                        {((apt.fee || 0) * 0.1) > 0 ? `₹${((apt.fee || 0) * 0.1).toFixed(0)}` : '—'}
-                                    </span>
-                                </td>
-                            </tr>
+                            {paged.map(apt => (
+                                <tr key={apt.id} className="hover:bg-slate-50/70 transition-colors">
+                                    <td className="px-4 py-3 text-xs text-slate-400 font-mono">{apt.id}</td>
+                                    <td className="px-4 py-3 font-medium text-slate-800 whitespace-nowrap">{apt.patientName || 'Unknown Patient'}</td>
+                                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{apt.doctorName || 'Dr. Unknown'}</td>
+                                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{apt.specialization || 'General'}</td>
+                                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap text-xs">
+                                        <p>{format(new Date(apt.date), 'dd MMM yyyy')}</p>
+                                        <p className="text-slate-400">{apt.time_slot || apt.timeSlot}</p>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-500 text-xs">{apt.consultation_type || apt.type || 'Online'}</td>
+                                    <td className="px-4 py-3">
+                                        <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border', STATUS_STYLES[apt.status === 'Scheduled' ? 'Pending' : apt.status] || STATUS_STYLES['Pending'])}>
+                                            {apt.status === 'Scheduled' ? 'Pending' : apt.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-700 font-semibold">₹{apt.fee || 0}</td>
+                                    <td className="px-4 py-3">
+                                        <span className={cn('font-semibold', ((apt.fee || 0) * 0.1) > 0 ? 'text-emerald-600' : 'text-slate-300')}>
+                                            {((apt.fee || 0) * 0.1) > 0 ? `₹${((apt.fee || 0) * 0.1).toFixed(0)}` : '—'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
                             {paged.length === 0 && (
                                 <tr><td colSpan={9} className="px-4 py-12 text-center text-slate-400 text-sm">No appointments found</td></tr>
                             )}

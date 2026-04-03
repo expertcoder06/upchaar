@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { SPECIALIZATIONS } from '@/lib/constants.js';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { fetchDoctors, fetchPendingDoctors, updateDoctorStatus, approvePendingDoctor, rejectPendingDoctor } from '@/lib/adminApi.js';
@@ -24,8 +24,7 @@ const STATUS_STYLES = {
 const EMPTY_DOCTOR_FORM = { fullName: '', email: '', phone: '', specialization: SPECIALIZATIONS[0], city: 'Delhi', consultationFee: 500, experience: 5 };
 
 export default function DoctorManagement() {
-    const { isSuperAdmin, admin } = useAdmin();
-    const [dataLoading, setDataLoading] = useState(true);
+    const { isSuperAdmin } = useAdmin();
     const [activeStatus, setActiveStatus] = useState('All');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
@@ -37,7 +36,6 @@ export default function DoctorManagement() {
     const [showAdd, setShowAdd] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_DOCTOR_FORM);
     const [approving, setApproving] = useState(null); // doctorId being approved
-    const [docUrls, setDocUrls] = useState({}); // { govtId: url, licenseDoc: url, degreeCert: url }
 
     // pendingDoctors: from pending_doctors table (Pending/Rejected applications)
     // approvedDoctors: from doctors table (Approved/Suspended)
@@ -79,8 +77,7 @@ export default function DoctorManagement() {
                 setPendingDoctors(pending.map(normalize));
                 setApprovedDoctors(approved.map(normalize));
             })
-            .catch(console.error)
-            .finally(() => setDataLoading(false));
+            .catch(console.error);
     }, []);
 
     const showToast = (msg, type = 'success') => {
@@ -91,7 +88,8 @@ export default function DoctorManagement() {
     const updateStatus = async (id, status, extra = {}) => {
         try {
             await updateDoctorStatus(id, status, extra.rejectionReason || '');
-            setDoctors(prev => prev.map(d => d.id === id ? { ...d, status, ...extra } : d));
+            setPendingDoctors(prev => prev.map(d => d.id === id ? { ...d, status, ...extra } : d));
+            setApprovedDoctors(prev => prev.map(d => d.id === id ? { ...d, status, ...extra } : d));
         } catch (err) {
             showToast(err.message, 'error');
         }
@@ -218,7 +216,7 @@ export default function DoctorManagement() {
                 applied_at: new Date().toISOString(),
             }]).select().single();
             if (error) throw error;
-            setDoctors(prev => [{
+            setApprovedDoctors(prev => [{
                 ...data,
                 fullName: data.full_name,
                 appliedAt: data.applied_at,

@@ -21,6 +21,12 @@ const STATUS_STYLES = {
 
 const EMPTY_PAT_FORM = { name: '', email: '', phone: '', city: 'Delhi' };
 
+const APT_STATUS = {
+    Completed: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    Pending: 'bg-amber-50 text-amber-600 border-amber-200',
+    Cancelled: 'bg-red-50 text-red-500 border-red-200',
+    Confirmed: 'bg-blue-50 text-blue-500 border-blue-200',
+};
 export default function PatientManagement() {
     const { isSuperAdmin } = useAdmin();
     const [patients, setPatients] = useState([]);

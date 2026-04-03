@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { supabase } from '@/lib/supabase.js';
 import { Search, Plus, Trash2, UserCog, Mail, Phone, X, ChevronLeft, ChevronRight } from 'lucide-react';

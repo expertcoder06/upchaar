@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { fetchFacilities, addFacility, deleteFacility } from '@/lib/adminApi.js';
 import { Search, Plus, Trash2, Building2, Stethoscope, Pill, X, ChevronLeft, ChevronRight } from 'lucide-react';

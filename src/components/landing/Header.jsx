@@ -222,7 +222,6 @@ export const Header = () => {
                                                 <NavigationMenuItem key={link.name}>
                                                     <Link
                                                         to={link.href}
-                                                        onClick={() => handleNavClick(link.href)}
                                                         className={cn(navigationMenuTriggerStyle(), "bg-transparent text-foreground hover:bg-primary/10 rounded-full font-medium")}
                                                     >
                                                         {link.name}
