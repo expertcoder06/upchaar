@@ -56,8 +56,9 @@ export const Header = () => {
     const navigate = useNavigate();
 
     const { user, profile, signOut, loading } = useAuth();
-    const { signOut: patientSignOut } = usePatient();
-    const isLoggedIn = !loading && !!user && !!profile;
+    const { patient, signOut: patientSignOut, loading: patientLoading } = usePatient();
+    const activeProfile = profile ?? patient ?? null;
+    const isLoggedIn = !loading && !patientLoading && !!user && !!activeProfile;
 
     // Close profile dropdown on outside click
     useEffect(() => {
@@ -111,10 +112,10 @@ export const Header = () => {
             >
                 {/* Avatar circle with initials */}
                 <div className="h-7 w-7 rounded-full bg-gradient-to-br from-teal-500 to-emerald-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {getInitials(profile?.full_name)}
+                    {getInitials(activeProfile?.full_name)}
                 </div>
                 <span className="text-sm font-semibold text-foreground max-w-[110px] truncate hidden lg:block">
-                    {profile?.full_name?.split(' ')[0] ?? 'Account'}
+                    {activeProfile?.full_name?.split(' ')[0] ?? 'Account'}
                 </span>
                 <ChevronDown size={13} className={`text-primary/70 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -126,13 +127,13 @@ export const Header = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.97 }}
                         transition={{ duration: 0.18 }}
-                        className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden"
+                        className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-[100] overflow-hidden"
                     >
                         {/* User info */}
                         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/70">
-                            <p className="text-sm font-bold text-slate-800 truncate">{profile?.full_name}</p>
+                            <p className="text-sm font-bold text-slate-800 truncate">{activeProfile?.full_name}</p>
                             <p className="text-xs text-teal-600 font-medium mt-0.5">
-                                {ROLE_LABELS[profile?.profile_type] ?? profile?.profile_type}
+                                {ROLE_LABELS[activeProfile?.profile_type] ?? activeProfile?.profile_type}
                             </p>
                             <p className="text-[11px] text-slate-400 truncate mt-0.5">{user?.email}</p>
                         </div>
@@ -141,7 +142,7 @@ export const Header = () => {
                         <button
                             onClick={() => {
                                 setIsProfileOpen(false);
-                                navigate(ROLE_DASHBOARD[profile?.profile_type] ?? '/');
+                                navigate(ROLE_DASHBOARD[activeProfile?.profile_type] ?? '/');
                             }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition text-left"
                         >
@@ -164,8 +165,8 @@ export const Header = () => {
     );
 
     return (
-        <header className="w-full">
-            <div className="container mx-auto flex h-20 items-center justify-between rounded-full bg-card/80 backdrop-blur-sm px-6 shadow-md">
+        <header className="relative z-[90] w-full">
+            <div className="relative z-[90] container mx-auto flex h-20 items-center justify-between rounded-full bg-card/80 backdrop-blur-sm px-6 shadow-md">
                 {/* Left Section - Logo */}
                 <Link to="#footer" className="flex items-center gap-2">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/50 bg-card">
@@ -323,19 +324,19 @@ export const Header = () => {
                                         {/* User info pill */}
                                         <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-teal-50 border border-teal-100">
                                             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-500 to-emerald-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                                {getInitials(profile?.full_name)}
+                                                {getInitials(activeProfile?.full_name)}
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-sm font-bold text-slate-800 truncate">{profile?.full_name}</p>
-                                                <p className="text-xs text-teal-600 font-medium">{ROLE_LABELS[profile?.profile_type]}</p>
+                                                <p className="text-sm font-bold text-slate-800 truncate">{activeProfile?.full_name}</p>
+                                                <p className="text-xs text-teal-600 font-medium">{ROLE_LABELS[activeProfile?.profile_type]}</p>
                                             </div>
                                         </div>
                                         <Button
                                             variant="outline"
-                                            className="w-full rounded-full border-teal-300 text-teal-700 gap-2"
+                                                className="w-full rounded-full border-teal-300 text-teal-700 gap-2"
                                             onClick={() => {
                                                 setIsMenuOpen(false);
-                                                navigate(ROLE_DASHBOARD[profile?.profile_type] ?? '/');
+                                                navigate(ROLE_DASHBOARD[activeProfile?.profile_type] ?? '/');
                                             }}
                                         >
                                             <LayoutDashboard size={16} />
