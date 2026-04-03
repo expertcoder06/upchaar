@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PAGE_SIZE = 8;
-const EMPTY_FORM = { name: '', email: '', phone: '' };
+const EMPTY_FORM = { name: '', email: '', phone: '', password: '' };
 
 export default function SupportAdminManagement() {
     const { isSuperAdmin } = useAdmin();
@@ -70,20 +70,31 @@ export default function SupportAdminManagement() {
     const handleAdd = async (e) => {
         e.preventDefault();
         try {
-            const newAdmin = {
-                name: form.name.trim(),
-                email: form.email.trim(),
-                phone: form.phone.trim(),
-                role: 'support_admin',
-                status: 'Active',
-            };
-            const { data, error } = await supabase.from('controllers').insert([newAdmin]).select().single();
-            if (error) throw error;
-            setAdmins(prev => [data, ...prev]);
+            // Get the current admin's JWT to pass as Authorization header
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Admin session not found. Please log in again.');
+
+            const res = await supabase.functions.invoke('create-support-admin', {
+                body: {
+                    name: form.name.trim(),
+                    email: form.email.trim(),
+                    password: form.password,
+                    phone: form.phone.trim(),
+                },
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+            });
+
+            if (res.error) throw new Error(res.error.message || 'Failed to create support admin');
+            const { supportAdmin, error: bodyError } = res.data ?? {};
+            if (bodyError) throw new Error(bodyError);
+
+            setAdmins(prev => [supportAdmin, ...prev]);
             setShowAdd(false);
             setForm(EMPTY_FORM);
             setPage(1);
-            showToast(`${data.name} added as Support Admin ✓`);
+            showToast(`${supportAdmin.name} added as Support Admin ✓`);
         } catch (err) {
             showToast(err.message, 'error');
         }
@@ -192,10 +203,12 @@ export default function SupportAdminManagement() {
                                     { key: 'name', label: 'Full Name', placeholder: 'e.g. Rahul Nair', type: 'text' },
                                     { key: 'email', label: 'Email Address', placeholder: 'support@sanjiwani.health', type: 'email' },
                                     { key: 'phone', label: 'Phone Number', placeholder: '9876543210', type: 'tel' },
+                                    { key: 'password', label: 'Initial Password', placeholder: 'Min. 8 characters', type: 'password' },
                                 ].map(({ key, label, placeholder, type }) => (
                                     <div key={key}>
                                         <label className="block text-xs font-semibold text-slate-600 mb-1.5">{label}</label>
-                                        <input required type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                                        <input required={key !== 'phone'} minLength={key === 'password' ? 8 : undefined}
+                                            type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                                             placeholder={placeholder}
                                             className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition" />
                                     </div>
