@@ -7,6 +7,7 @@ import { Features } from '@/components/landing/features';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { QuoteSection } from '@/components/landing/quote-section';
 import { NewsletterSignUp } from '@/components/landing/newsletter-signup';
+import { FeedbackForm } from '@/components/landing/feedback-form';
 import { Footer } from '@/components/landing/Footer';
 import { Header } from '@/components/landing/Header';
 
@@ -38,6 +39,7 @@ export default function LandingPage() {
                     <Features />
                     <HowItWorks />
                     <QuoteSection />
+                    <FeedbackForm />
                     <NewsletterSignUp />
                 </main>
                 <div className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]" aria-hidden="true">

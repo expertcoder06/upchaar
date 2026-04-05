@@ -7,7 +7,7 @@ import { PenLine, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 export default function BloggerLogin() {
     const { loginBlogger } = useBlog();
     const navigate = useNavigate();
-    const [form, setForm] = useState({ email: '', password: '' });
+    const [form, setForm] = useState({ email: '', password: '' }); // handles both phone & email
     const [showPwd, setShowPwd] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -45,10 +45,10 @@ export default function BloggerLogin() {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
-                            <input type="email" required value={form.email}
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Email or Phone Number</label>
+                            <input type="text" required value={form.email}
                                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                                placeholder="blogger@upchaar.health"
+                                placeholder="email@upchaar.health or 9876543210"
                                 className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition" />
                         </div>
                         <div>

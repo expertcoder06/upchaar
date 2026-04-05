@@ -264,16 +264,16 @@ export default function LoginPage() {
                         {tab === 'signin' && (
                             <form onSubmit={handleSignIn} className="space-y-4">
 
-                                {/* Email */}
+                                {/* Email or Phone */}
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-2">Email Address</label>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-2">Email or Phone Number</label>
                                     <div className="relative">
                                         <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input
-                                            name="email" type="email" required
+                                            name="email" type="text" required
                                             value={signInForm.email}
                                             onChange={handleSignInChange}
-                                            placeholder="you@example.com"
+                                            placeholder="you@example.com or 9876543210"
                                             className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/30 focus:border-teal-400 transition placeholder:text-slate-400"
                                         />
                                     </div>

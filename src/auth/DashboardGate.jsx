@@ -39,13 +39,16 @@ export default function DashboardGate() {
         return <Navigate to="/login" replace />;
     }
 
-    // Logged in → redirect to the correct dashboard
+    // Logged in → redirect to their specific dashboard
     const dashboardRoutes = {
-        patient: '/patient/dashboard',                    // Patients land on their specific dashboard
+        patient: '/patient/dashboard',
         doctor: '/doctor/dashboard',
         clinic: '/clinic/dashboard',
         medical: '/medical/dashboard',
         hospital: '/hospital/dashboard',
+        blogger: '/blogger/dashboard',
+        super_admin: '/admin/dashboard',
+        support_admin: '/admin/dashboard',
     };
 
     const destination = dashboardRoutes[profile.profile_type] || '/';

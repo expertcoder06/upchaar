@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDoctor } from '../context/DoctorContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabase.js';
 import { Stethoscope, Eye, EyeOff, Loader2, AlertCircle, Phone, Lock, User, MapPin, ChevronDown } from 'lucide-react';
 import { isStrongPassword, PASSWORD_RULE_MESSAGE } from '@/lib/auth.js';
 
@@ -12,7 +13,11 @@ const SPECIALIZATIONS = [
     'Psychiatrist', 'Pulmonologist', 'Radiologist', 'Urologist',
 ];
 
-const EMPTY = { fullName: '', email: '', phone: '', password: '', confirmPassword: '', specialization: '', city: '' };
+const EMPTY = { 
+    fullName: '', email: '', phone: '', password: '', confirmPassword: '', 
+    specialization: '', city: '', medicalLicense: '', nmcRegistration: '', dob: '' 
+};
+const MIN_AGE = 18;
 
 export default function DoctorRegister() {
     const { register } = useDoctor();
@@ -29,6 +34,19 @@ export default function DoctorRegister() {
         if (!form.fullName.trim()) return 'Full name is required.';
         if (!form.phone.trim() || !/^\d{10}$/.test(form.phone.trim())) return 'Enter a valid 10-digit phone number.';
         if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) return 'Enter a valid email address.';
+        
+        // Age validation (18+)
+        if (!form.dob) return 'Date of Birth is required.';
+        const birthDate = new Date(form.dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+        if (age < MIN_AGE) return `You must be at least ${MIN_AGE} years old to register.`;
+
+        if (!form.medicalLicense.trim()) return 'Medical License Number is required.';
+        if (!form.nmcRegistration.trim()) return 'NMC/MCI Registration Number is required.';
+
         if (form.password.length < 6) return 'Password must be at least 6 characters.';
         if (!isStrongPassword(form.password)) return PASSWORD_RULE_MESSAGE;
         if (form.password !== form.confirmPassword) return 'Passwords do not match.';
@@ -42,6 +60,18 @@ export default function DoctorRegister() {
         setError('');
         setLoading(true);
         try {
+            // Check uniqueness of phone
+            const { data: phoneCheck } = await supabase.from('profiles').select('id').eq('phone', form.phone.trim()).maybeSingle();
+            if (phoneCheck) throw new Error('This phone number is already registered.');
+
+            // Check uniqueness of Medical License
+            const { data: licenseCheck } = await supabase.from('doctors').select('profile_id').eq('medical_license', form.medicalLicense.trim()).maybeSingle();
+            if (licenseCheck) throw new Error('Medical License Number is already registered.');
+
+            // Check uniqueness of NMC/MCI
+            const { data: registrationCheck } = await supabase.from('doctors').select('profile_id').eq('nmc_registration', form.nmcRegistration.trim()).maybeSingle();
+            if (registrationCheck) throw new Error('NMC/MCI Registration Number is already registered.');
+
             await register({
                 fullName: form.fullName,
                 email: form.email,
@@ -49,6 +79,9 @@ export default function DoctorRegister() {
                 password: form.password,
                 specialization: form.specialization,
                 city: form.city,
+                medicalLicense: form.medicalLicense,
+                nmcRegistration: form.nmcRegistration,
+                dob: form.dob
             });
             navigate('/doctor/dashboard', { replace: true });
         } catch (err) {
@@ -60,7 +93,10 @@ export default function DoctorRegister() {
 
     const fields = [
         { name: 'fullName', label: 'Full Name', placeholder: 'Dr. Priya Sharma', type: 'text', icon: User, required: true },
+        { name: 'dob', label: 'Date of Birth', placeholder: '', type: 'date', icon: null, required: true },
         { name: 'phone', label: 'Phone Number', placeholder: '9876543210', type: 'tel', icon: Phone, required: true },
+        { name: 'medicalLicense', label: 'Medical License Number', placeholder: 'REG-123456', type: 'text', icon: null, required: true },
+        { name: 'nmcRegistration', label: 'NMC / MCI Registration Number', placeholder: 'NMC/123/2024', type: 'text', icon: null, required: true },
         { name: 'email', label: 'Email Address', placeholder: 'doctor@clinic.com', type: 'email', icon: null, required: true },
         { name: 'city', label: 'City', placeholder: 'Delhi, Mumbai, Bangalore…', type: 'text', icon: MapPin, required: false },
     ];

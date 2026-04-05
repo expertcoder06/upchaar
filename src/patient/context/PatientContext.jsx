@@ -125,9 +125,13 @@ export function PatientProvider({ children }) {
      * @param {string} password
      * @returns {object} The patient profile from public.profiles
      */
-    const signIn = useCallback(async (email, password) => {
+    const signIn = useCallback(async (loginId, password) => {
+        const identifier = loginId.trim().toLowerCase();
+        const isEmail = identifier.includes('@');
+        const loginData = isEmail ? { email: identifier } : { phone: identifier };
+
         const { data, error } = await withAuthTimeout(supabase.auth.signInWithPassword({
-            email: email.trim(),
+            ...loginData,
             password,
         }), 'Sign in is taking too long. Please check your connection and try again.');
 

@@ -76,14 +76,21 @@ export function AuthProvider({ children }) {
         Promise.race([
             supabase.auth.getSession(),
             new Promise((_, rej) => setTimeout(() => rej(new Error('session fetch timeout')), 5000))
-        ]).then(({ data: { session } }) => {
+        ]).then(async ({ data: { session } }) => {
             if (!mounted) return;
             const u = session?.user ?? null;
             setUser(u);
-            // ⚡ Unblock the app immediately — profile loads in background
-            if (mounted) setLoading(false);
+            
             if (u) {
-                fetchProfile(u.id).then(p => { if (mounted) setProfile(p); });
+                // Wait for profile fetch before unblocking the app
+                const p = await fetchProfile(u.id);
+                if (mounted) {
+                    setProfile(p);
+                    setLoading(false);
+                }
+            } else {
+                // No user: unblock app immediately
+                if (mounted) setLoading(false);
             }
         }).catch(() => { if (mounted) setLoading(false); });
 
@@ -116,9 +123,13 @@ export function AuthProvider({ children }) {
     }, [clearAuthState, fetchProfile]);
 
     /** signIn — for patients/doctors/etc. via unified login */
-    const signIn = useCallback(async (email, password) => {
+    const signIn = useCallback(async (loginId, password) => {
+        const identifier = loginId.trim().toLowerCase();
+        const isEmail = identifier.includes('@');
+        const loginData = isEmail ? { email: identifier } : { phone: identifier };
+
         const { data, error } = await withAuthTimeout(supabase.auth.signInWithPassword({
-            email: email.trim(), password,
+            ...loginData, password,
         }), 'Sign in is taking too long. Please check your connection and try again.');
         if (error) {
             throw new Error(

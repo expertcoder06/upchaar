@@ -20,6 +20,7 @@ import { usePatient } from '../context/PatientContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, User, Phone } from 'lucide-react';
 import { isStrongPassword, PASSWORD_RULE_MESSAGE } from '@/lib/auth.js';
+import { supabase } from '@/lib/supabase.js';
 
 export default function PatientRegister() {
     const { signUp } = usePatient();
@@ -65,6 +66,12 @@ export default function PatientRegister() {
 
         setLoading(true);
         try {
+            // Check uniqueness of phone (only if provided)
+            if (form.phone.trim()) {
+                const { data: phoneCheck } = await supabase.from('profiles').select('id').eq('phone', form.phone.trim()).maybeSingle();
+                if (phoneCheck) throw new Error('This phone number is already registered.');
+            }
+
             await signUp({
                 fullName: form.fullName,
                 email: form.email,

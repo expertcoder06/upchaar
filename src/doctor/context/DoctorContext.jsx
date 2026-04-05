@@ -108,9 +108,13 @@ export function DoctorProvider({ children }) {
     }, [restoreDoctorSession]);
 
     // ── Login ─────────────────────────────────────────────────────────────────
-    const login = useCallback(async (email, password) => {
+    const login = useCallback(async (loginId, password) => {
+        const identifier = loginId.trim().toLowerCase();
+        const isEmail = identifier.includes('@');
+        const loginData = isEmail ? { email: identifier } : { phone: identifier };
+
         const { data, error } = await withAuthTimeout(supabase.auth.signInWithPassword({
-            email: email.trim(), password,
+            ...loginData, password,
         }), 'Sign in is taking too long. Please check your connection and try again.');
         if (error) {
             throw new Error(
@@ -139,7 +143,7 @@ export function DoctorProvider({ children }) {
     }, [fetchDoctorRecord]);
 
     // ── Register ──────────────────────────────────────────────────────────────
-    const register = useCallback(async ({ fullName, email, phone, password, specialization, city }) => {
+    const register = useCallback(async ({ fullName, email, phone, password, specialization, city, medicalLicense, nmcRegistration, dob }) => {
         if (!isStrongPassword(password)) {
             throw new Error(PASSWORD_RULE_MESSAGE);
         }
@@ -153,6 +157,9 @@ export function DoctorProvider({ children }) {
                     phone: phone.trim(),
                     specialization: specialization || 'General Physician',
                     city: city || '',
+                    medicalLicense: medicalLicense || '',
+                    nmcRegistration: nmcRegistration || '',
+                    dob: dob || '',
                     experience: 0, fee: 500, status: 'Pending', bio: '',
                     gender: '', degree: 'MBBS', clinicName: '',
                     languages: ['English'], availableDays: [],
@@ -182,10 +189,16 @@ export function DoctorProvider({ children }) {
             }
 
             const { error: doctorError } = await supabase.from('doctors').insert({
-                profile_id: userId, full_name: fullName.trim(),
-                email: email.trim(), phone: phone.trim(),
+                profile_id: userId,
+                full_name: fullName.trim(),
+                email: email.trim(),
+                phone: phone.trim(),
+                medical_license: medicalLicense.trim(),
+                nmc_registration: nmcRegistration.trim(),
+                dob: dob,
                 specialization: specialization || 'General Physician',
-                city: city || '', status: 'Pending',
+                city: city || '',
+                status: 'Pending',
             });
             if (doctorError) {
                 console.error('[DoctorContext] doctor insert error:', doctorError);

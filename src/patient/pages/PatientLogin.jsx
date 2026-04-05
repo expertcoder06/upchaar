@@ -30,7 +30,7 @@ export default function PatientLogin() {
     }, [patient, sessionLoading, navigate]);
 
     // ── Form state ────────────────────────────────
-    const [form, setForm] = useState({ email: '', password: '' });
+    const [form, setForm] = useState({ email: '', password: '' }); // handles both phone & email
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -127,17 +127,17 @@ export default function PatientLogin() {
                             {/* Email field */}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-2">
-                                    Email Address
+                                    Email or Phone Number
                                 </label>
                                 <div className="relative">
                                     <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
                                         name="email"
-                                        type="email"
+                                        type="text"
                                         required
                                         value={form.email}
                                         onChange={handleChange}
-                                        placeholder="you@example.com"
+                                        placeholder="email@example.com or 9876543210"
                                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400 transition placeholder:text-slate-400"
                                     />
                                 </div>

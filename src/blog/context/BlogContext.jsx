@@ -121,9 +121,13 @@ export function BlogProvider({ children }) {
 
 
     // ── Blogger login ─────────────────────────────────────────────────────────
-    const loginBlogger = useCallback(async (email, password) => {
+    const loginBlogger = useCallback(async (loginId, password) => {
+        const identifier = loginId.trim().toLowerCase();
+        const isEmail = identifier.includes('@');
+        const loginData = isEmail ? { email: identifier } : { phone: identifier };
+
         const { data, error } = await withAuthTimeout(
-            supabase.auth.signInWithPassword({ email: email.trim(), password }),
+            supabase.auth.signInWithPassword({ ...loginData, password }),
             'Sign in is taking too long. Please check your connection and try again.'
         );
         if (error) {

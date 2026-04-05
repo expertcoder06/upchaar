@@ -135,8 +135,7 @@ export function AppRoutes() {
             {/* Home / Landing */}
             <Route path="/" element={<LandingPage />} />
 
-            {/* Patient-facing feature pages */}
-            <Route path="/dashboard" element={<ProtectedRoute><AppLayout><DashboardPage /></AppLayout></ProtectedRoute>} />
+            {/* Feature pages share the AppLayout (sidebar/topbar) */}
             <Route path="/doctors" element={<ProtectedRoute><AppLayout><DoctorsPage /></AppLayout></ProtectedRoute>} />
             <Route path="/doctors/:id" element={<ProtectedRoute><AppLayout><DoctorDetailPage /></AppLayout></ProtectedRoute>} />
             <Route path="/diagnostics" element={<AppLayout><DiagnosticsPage /></AppLayout>} />

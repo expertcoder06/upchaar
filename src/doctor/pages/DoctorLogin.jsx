@@ -7,7 +7,7 @@ import { Stethoscope, Eye, EyeOff, Loader2, AlertCircle, Mail, Lock } from 'luci
 export default function DoctorLogin() {
     const { login } = useDoctor();
     const navigate = useNavigate();
-    const [form, setForm] = useState({ email: '', password: '' });
+    const [form, setForm] = useState({ email: '', password: '' }); // 'email' field now handles both email/phone
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -79,16 +79,16 @@ export default function DoctorLogin() {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Email */}
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-2">Email Address</label>
+                                <label className="block text-xs font-semibold text-slate-600 mb-2">Email or Phone Number</label>
                                 <div className="relative">
                                     <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
                                         name="email"
-                                        type="email"
+                                        type="text"
                                         required
                                         value={form.email}
                                         onChange={handleChange}
-                                        placeholder="doctor@clinic.com"
+                                        placeholder="doctor@clinic.com or 9876543210"
                                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition placeholder:text-slate-400"
                                     />
                                 </div>
