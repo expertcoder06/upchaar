@@ -167,14 +167,15 @@ export default function DoctorProfile() {
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                     <h2 className="font-semibold text-slate-700 text-sm mb-4 flex items-center gap-2"><Building2 size={15} /> Clinic Information</h2>
                     <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Clinic / Medical Name</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Clinic Name(s)</label>
                         <input
                             name="clinicName"
                             value={form.clinicName}
                             onChange={handleChange}
-                            placeholder="Heart Care Clinic"
+                            placeholder="e.g. City Clinic, Apollo Hospital (use commas for multiple)"
                             className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                         />
+                        <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Patients will see these clinics as separate options during booking.</p>
                     </div>
                 </div>
 

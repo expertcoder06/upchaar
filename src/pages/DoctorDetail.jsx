@@ -18,8 +18,10 @@ import {
     Clock,
     CalendarCheck2,
     AlertTriangle,
-    X
+    X,
+    Hospital
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase.js';
 import { usePatient } from '@/patient/context/PatientContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -476,20 +478,68 @@ export default function DoctorDetailPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Availability info */}
-                        {doctor.availableDays.length > 0 && (
-                            <Card className="border-0 shadow-sm ring-1 ring-black/5 rounded-2xl bg-white">
-                                <CardContent className="p-6">
-                                    <h3 className="font-semibold text-gray-800 mb-3">Availability</h3>
-                                    <div className="flex flex-wrap gap-2 mb-2">
-                                        {doctor.availableDays.map(day => (
-                                            <Badge key={day} variant="secondary" className="bg-teal-50 text-teal-700 border-teal-100">{day}</Badge>
-                                        ))}
-                                    </div>
-                                    <p className="text-sm text-gray-500">{doctor.hoursFrom} – {doctor.hoursTo}</p>
-                                </CardContent>
-                            </Card>
-                        )}
+                        {/* Clinics & Timings */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 px-1">
+                                <Hospital className="h-5 w-5 text-teal-600" />
+                                <h2 className="text-xl font-bold text-gray-900 font-headline">Clinics & Timings</h2>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {(doctor.clinicNames.length > 0 ? doctor.clinicNames : [doctor.clinicName || 'Main Clinic']).map((cName, idx) => (
+                                    <Card key={idx} className="border-0 shadow-sm ring-1 ring-black/5 rounded-2xl bg-white overflow-hidden group hover:ring-teal-200 transition-all">
+                                        <CardContent className="p-0">
+                                            <div className="bg-teal-50/50 px-5 py-4 border-b border-teal-50">
+                                                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                                                    <div className="h-7 w-7 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                                                        <Hospital className="h-4 w-4 text-teal-600" />
+                                                    </div>
+                                                    {cName}
+                                                </h3>
+                                            </div>
+                                            <div className="p-5 space-y-4">
+                                                <div className="flex gap-3">
+                                                    <MapPin className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                                    <p className="text-sm text-gray-600 leading-relaxed">
+                                                        {doctor.city}, {doctor.state || 'India'}
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="pt-3 border-t border-slate-50 space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                            <CalendarDays className="h-3.5 w-3.5" />
+                                                            Available Days
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {doctor.availableDays.length > 0 ? (
+                                                            doctor.availableDays.map(day => (
+                                                                <Badge key={day} variant="secondary" className="bg-white border border-teal-100 text-teal-700 text-[10px] px-2 py-0">
+                                                                    {day}
+                                                                </Badge>
+                                                            ))
+                                                        ) : (
+                                                            <span className="text-xs text-gray-400 italic">Schedule not specified</span>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center justify-between pt-1">
+                                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                            <Clock className="h-3.5 w-3.5" />
+                                                            Consultation Hours
+                                                        </div>
+                                                        <span className="text-xs font-bold text-teal-600">
+                                                            {doctor.hoursFrom} – {doctor.hoursTo}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Right Column: Booking Widget */}
@@ -503,6 +553,29 @@ export default function DoctorDetailPage() {
                             <div className="px-6 pb-5 text-center">
                                 <p className="text-[11px] text-teal-600/80 uppercase tracking-widest font-bold mb-1">Consultation Fee</p>
                                 <p className="text-4xl font-bold text-teal-600">₹{doctor.fees}</p>
+                            </div>
+
+                            <div className="px-6 pb-6">
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                    Select Clinic
+                                </label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {(doctor.clinicNames.length > 0 ? doctor.clinicNames : [doctor.clinicName || 'Main Clinic']).map(name => (
+                                        <button
+                                            key={name}
+                                            onClick={() => setSelectedClinic(name)}
+                                            className={cn(
+                                                "w-full px-4 py-3 rounded-xl border text-left text-sm font-medium transition-all flex items-center justify-between",
+                                                selectedClinic === name 
+                                                    ? "bg-teal-50 border-teal-500 text-teal-700 ring-4 ring-teal-500/10"
+                                                    : "bg-white border-slate-100 text-slate-600 hover:border-teal-200"
+                                            )}
+                                        >
+                                            <span className="truncate">{name}</span>
+                                            {selectedClinic === name && <CheckCircle className="h-4 w-4 text-teal-500 shrink-0" />}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* In-Clinic Section */}
