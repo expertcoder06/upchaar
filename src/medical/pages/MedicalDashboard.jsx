@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '@/auth/AuthContext.jsx';
 import { supabase } from '@/lib/supabase.js';
 import { useNavigate } from 'react-router-dom';
@@ -39,8 +39,8 @@ export default function MedicalDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
   const sidebarRef = useRef(null);
 
-  const [stats] = useState({ totalDoctors: 35, totalPatients: 1200, todayAppointments: 80, totalRevenue: '5,50,000' });
-  const circumference = 2 * Math.PI * 54;
+  const stats = useMemo(() => ({ totalDoctors: 35, totalPatients: 1200, todayAppointments: 80, totalRevenue: '5,50,000' }), []);
+  const circumference = useMemo(() => 2 * Math.PI * 54, []);
 
   // Handle mobile resize
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function MedicalDashboard() {
 
   useEffect(() => { fetchMedicals(); }, []);
 
-  const fetchMedicals = async () => {
+  const fetchMedicals = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('medicals').select('*').order('created_at', { ascending: false });
       if (error) throw error;
@@ -74,23 +74,25 @@ export default function MedicalDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleSignOut = async () => { await signOut(); navigate('/login'); };
-  const handleNavClick = (label) => {
+  const handleSignOut = useCallback(async () => { await signOut(); navigate('/login'); }, [signOut, navigate]);
+  const handleNavClick = useCallback((label) => {
     setActiveNav(label);
     if (window.innerWidth < 1024) setSidebarOpen(false);
-  };
+  }, []);
 
-  const displayName = profile?.full_name || 'Medical Center';
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+  const displayName = useMemo(() => profile?.full_name || 'Medical Center', [profile?.full_name]);
+  const today = useMemo(() =>
+    new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()
+  , []);
 
-  const STAT_CARDS = [
+  const STAT_CARDS = useMemo(() => [
     { color: 'teal', icon: 'groups', label: 'Total Doctors', value: stats.totalDoctors },
     { color: 'cyan', icon: 'personal_injury', label: 'Total Patients', value: stats.totalPatients.toLocaleString() },
     { color: 'emerald', icon: 'event_available', label: "Today's Appts", value: stats.todayAppointments },
     { color: 'amber', icon: 'payments', label: 'Total Revenue', value: `Rs. ${stats.totalRevenue}` },
-  ];
+  ], [stats]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 text-gray-800" style={{ fontFamily: "'Inter', sans-serif" }}>

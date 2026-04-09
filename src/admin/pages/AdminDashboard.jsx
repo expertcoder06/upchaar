@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     AreaChart, Area, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -26,7 +26,7 @@ const STATUS_CONFIG = {
     Cancelled: { icon: XCircle, cls: 'bg-red-50 text-red-500' },
 };
 
-function StatCard({ icon: Icon, label, value, sub, trend, color }) {
+const StatCard = React.memo(function StatCard({ icon: Icon, label, value, sub, trend, color }) {
     const isPositive = trend >= 0;
     return (
         <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
@@ -44,7 +44,7 @@ function StatCard({ icon: Icon, label, value, sub, trend, color }) {
             {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
         </div>
     );
-}
+});
 
 export default function AdminDashboard() {
     const { admin } = useAdmin();
@@ -71,13 +71,19 @@ export default function AdminDashboard() {
         return Object.entries(counts).map(([name, value]) => ({ name, value, color: STATUS_PIE_COLORS[name] }));
     }, [recentAppointments]);
 
+    // Memoize greeting to avoid recomputing on every render
+    const greeting = useMemo(() => {
+        const h = new Date().getHours();
+        const timeOfDay = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+        return `Good ${timeOfDay}, ${admin?.name?.split(' ')[0]} 👋`;
+    }, [admin?.name]);
+
     return (
         <div className="space-y-6">
             {/* Greeting */}
             <div>
                 <h1 className="text-2xl font-bold text-slate-800">
-                    Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},{' '}
-                    {admin?.name?.split(' ')[0]} 👋
+                    {greeting}
                 </h1>
                 <p className="text-sm text-slate-500 mt-1">Here's what's happening on Upchaar Health today.</p>
             </div>

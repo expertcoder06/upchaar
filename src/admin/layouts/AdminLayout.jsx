@@ -6,7 +6,7 @@ import {
     Bell, ScrollText, Settings, ChevronLeft, ChevronRight,
     Stethoscope, Building2, UserCog, PenLine
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -46,7 +46,10 @@ export default function AdminLayout() {
 
     if (!admin) return <Navigate to="/admin/login" replace />;
 
-    const navItems = isSuperAdmin ? [...BASE_NAV, ...SUPER_ADMIN_NAV] : BASE_NAV;
+    const navItems = useMemo(
+        () => isSuperAdmin ? [...BASE_NAV, ...SUPER_ADMIN_NAV] : BASE_NAV,
+        [isSuperAdmin]
+    );
 
     return (
         <div className="flex h-screen bg-[#f1f5f9] overflow-hidden">

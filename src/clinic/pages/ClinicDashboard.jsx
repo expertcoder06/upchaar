@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '@/auth/AuthContext.jsx';
 import { supabase } from '@/lib/supabase.js';
 import { useNavigate } from 'react-router-dom';
@@ -37,8 +37,8 @@ export default function ClinicDashboard() {
   const sidebarRef = useRef(null);
   const [newClinic, setNewClinic] = useState({ name: '', email: '', phone: '', clinic_id_no: '', address: '', city: '', state: '' });
 
-  const stats = { branches: 3, patients: 450, todayVisits: 12, revenue: '1,20,000' };
-  const circumference = 2 * Math.PI * 54;
+  const stats = useMemo(() => ({ branches: 3, patients: 450, todayVisits: 12, revenue: '1,20,000' }), []);
+  const circumference = useMemo(() => 2 * Math.PI * 54, []);
 
   // Handle mobile resize
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function ClinicDashboard() {
 
   useEffect(() => { fetchClinics(); }, []);
 
-  const fetchClinics = async () => {
+  const fetchClinics = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('clinics').select('*').order('created_at', { ascending: false });
       if (error) throw error;
@@ -78,9 +78,9 @@ export default function ClinicDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleAddClinic = async (e) => {
+  const handleAddClinic = useCallback(async (e) => {
     e.preventDefault();
     try {
       const { error } = await supabase.from('clinics').insert([{ ...newClinic, profile_id: profile?.id }]);
@@ -91,23 +91,25 @@ export default function ClinicDashboard() {
     } catch (err) {
       alert(err.message);
     }
-  };
+  }, [newClinic, profile?.id, fetchClinics]);
 
-  const handleSignOut = async () => { await signOut(); navigate('/login'); };
-  const handleNavClick = (label) => {
+  const handleSignOut = useCallback(async () => { await signOut(); navigate('/login'); }, [signOut, navigate]);
+  const handleNavClick = useCallback((label) => {
     setActiveNav(label);
     if (window.innerWidth < 1024) setSidebarOpen(false);
-  };
+  }, []);
 
-  const displayName = profile?.full_name || 'Clinic Admin';
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+  const displayName = useMemo(() => profile?.full_name || 'Clinic Admin', [profile?.full_name]);
+  const today = useMemo(() =>
+    new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()
+  , []);
 
-  const STAT_CARDS = [
+  const STAT_CARDS = useMemo(() => [
     { color: 'teal', icon: 'apartment', label: 'Clinic Branches', value: stats.branches },
     { color: 'cyan', icon: 'personal_injury', label: 'Total Patients', value: stats.patients },
     { color: 'emerald', icon: 'event_available', label: "Today's Visits", value: stats.todayVisits },
     { color: 'amber', icon: 'payments', label: 'Total Revenue', value: `Rs. ${stats.revenue}` },
-  ];
+  ], [stats]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 text-gray-800" style={{ fontFamily: "'Inter', sans-serif" }}>

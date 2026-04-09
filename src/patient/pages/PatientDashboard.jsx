@@ -7,7 +7,7 @@
  * ─────────────────────────────────────────────────
  */
 
-import { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { usePatient } from '../context/PatientContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,8 +43,7 @@ function isFuture(dateStr) {
     return dateStr >= new Date().toISOString().split('T')[0];
 }
 
-/* ── Appointment Banner Card ── */
-function AppointmentBannerCard({ appt, index }) {
+const AppointmentBannerCard = React.memo(function AppointmentBannerCard({ appt, index }) {
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -81,7 +80,7 @@ function AppointmentBannerCard({ appt, index }) {
                     <div className="flex items-center gap-2 text-white text-xs">
                         <CalendarCheck2 size={13} className="text-white/70" />
                         <span className="font-medium">
-                            {appt.date && isToday(appt.date.split('T')[0]) ? '🗓 Today' : formatDate(appt.date ? appt.date.split('T')[0] : '')}
+                            {appt.date && isToday(appt.date.split('T')[0]) ? '📅 Today' : formatDate(appt.date ? appt.date.split('T')[0] : '')}
                         </span>
                     </div>
                     <div className="flex items-center gap-2 text-white text-xs">
@@ -99,10 +98,10 @@ function AppointmentBannerCard({ appt, index }) {
             </div>
         </motion.div>
     );
-}
+});
 
 /* ── Appointments Banner Section ── */
-function AppointmentsBanner({ patientId }) {
+const AppointmentsBanner = React.memo(function AppointmentsBanner({ patientId }) {
     const [appointments, setAppointments] = useState([]);
     const [loadingAppts, setLoadingAppts] = useState(true);
     const scrollRef = useRef(null);
@@ -128,11 +127,11 @@ function AppointmentsBanner({ patientId }) {
             });
     }, [patientId]);
 
-    const scroll = (dir) => {
+    const scroll = useCallback((dir) => {
         if (scrollRef.current) {
             scrollRef.current.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
         }
-    };
+    }, []);
 
     if (loadingAppts) {
         return (
@@ -198,7 +197,7 @@ function AppointmentsBanner({ patientId }) {
             </div>
         </div>
     );
-}
+});
 
 /* ── Main Dashboard ─────────────────────────────── */
 export default function PatientDashboard() {
@@ -214,7 +213,7 @@ export default function PatientDashboard() {
      * Uploads the selected image to Supabase Storage and saves
      * the public URL to public.profiles.avatar_url.
      */
-    const handleAvatarChange = async (e) => {
+    const handleAvatarChange = useCallback(async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         setAvatarError('');
@@ -229,7 +228,14 @@ export default function PatientDashboard() {
             // Reset input so the same file can be re-selected
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-    };
+    }, [patient?.id, updateProfile]);
+
+    // Memoize initials
+    const initials = useMemo(() => {
+        return patient?.full_name
+            ? patient.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+            : 'P';
+    }, [patient?.full_name]);
 
     // Show skeleton while session is being restored from Supabase
     if (loading) {
@@ -248,10 +254,7 @@ export default function PatientDashboard() {
         return null;
     }
 
-    // Get initials for avatar fallback
-    const initials = patient.full_name
-        ? patient.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-        : 'P';
+
 
     return (
         <>
