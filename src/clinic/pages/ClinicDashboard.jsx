@@ -13,11 +13,7 @@ const NAV_ITEMS = [
   { icon: 'settings', label: 'Settings' },
 ];
 
-const MOCK_BRANCHES = [
-  { id: 1, name: 'City Clinic - Main', specialty: 'General & OPD', rating: 4.7, patients: 450, online: true },
-  { id: 2, name: 'Upchaar Wellness', specialty: 'Pediatrics & Vaccination', rating: 4.5, patients: 280, online: true },
-  { id: 3, name: 'HealthFirst Centre', specialty: 'Dermatology & Skin', rating: 4.9, patients: 310, online: false },
-];
+// Linked staff will be fetched from database
 
 const MOCK_ACTIVITY = [
   { id: 1, title: 'Walk-in: Priya Mehta', sub: 'Assigned to Dr. Patel', time: 'Today, 09:15 AM', badge: 'CHECKED IN', badgeClass: 'bg-teal-50 text-teal-700 border border-teal-100', isLast: false },
@@ -28,16 +24,18 @@ const MOCK_ACTIVITY = [
 export default function ClinicDashboard() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [staffDoctors, setStaffDoctors] = useState([]);
   const [clinics, setClinics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
+  const [doctorSecretKey, setDoctorSecretKey] = useState('');
+  const [addingDoctor, setAddingDoctor] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); 
   const sidebarRef = useRef(null);
-  const [newClinic, setNewClinic] = useState({ name: '', email: '', phone: '', clinic_id_no: '', address: '', city: '', state: '' });
 
-  const stats = useMemo(() => ({ branches: 3, patients: 450, todayVisits: 12, revenue: '1,20,000' }), []);
+  const stats = useMemo(() => ({ doctors: staffDoctors.length, patients: 0, todayVisits: 0, revenue: '0' }), [staffDoctors.length]);
   const circumference = useMemo(() => 2 * Math.PI * 54, []);
 
   // Handle mobile resize
@@ -66,32 +64,113 @@ export default function ClinicDashboard() {
     return () => document.removeEventListener('keydown', handleEsc);
   }, []);
 
-  useEffect(() => { fetchClinics(); }, []);
+
+
+  const fetchStaff = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('staff_links')
+        .select(`
+          id,
+          doctor_id,
+          doctors (
+            id,
+            full_name,
+            specialization,
+            clinic_name
+          )
+        `)
+        .eq('organization_id', profile?.id);
+
+      if (error) throw error;
+      setStaffDoctors(data || []);
+    } catch (err) {
+      console.error('Error fetching staff:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.id]);
+
+  const handleAddDoctor = useCallback(async (e) => {
+    e.preventDefault();
+    if (!doctorSecretKey.trim()) return;
+
+    setAddingDoctor(true);
+    let cleanKey = doctorSecretKey.trim().toUpperCase();
+    if (cleanKey && !cleanKey.startsWith('UPC-')) {
+      cleanKey = `UPC-${cleanKey}`;
+    }
+
+    try {
+      // 1. Find doctor by secret key
+      const { data: doctor, error: findError } = await supabase
+        .from('doctors')
+        .select('id, full_name')
+        .eq('secret_key', cleanKey)
+        .maybeSingle();
+
+      if (findError) throw findError;
+      if (!doctor) throw new Error('Wrong Key. Please ask the doctor for the right key.');
+
+      // 2. Link doctor
+      const { error: linkError } = await supabase
+        .from('staff_links')
+        .insert([{
+          doctor_id: doctor.id,
+          organization_id: profile?.id,
+          organization_type: 'clinic'
+        }]);
+
+      if (linkError) {
+        if (linkError.code === '23505') throw new Error(`${doctor.full_name} is already linked to your clinic.`);
+        throw linkError;
+      }
+
+      alert(`${doctor.full_name} is successfully added in your clinic`);
+      setIsAddOpen(false);
+      setDoctorSecretKey('');
+      fetchStaff();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setAddingDoctor(false);
+    }
+  }, [doctorSecretKey, profile?.id, fetchStaff]);
+
+  const handleUnlinkDoctor = useCallback(async (e, linkId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('Warning: This doctor will be removed from your clinic and patients will no longer be able to see this doctor linked with your clinic. Do you want to continue?')) return;
+    try {
+      const { error } = await supabase
+        .from('staff_links')
+        .delete()
+        .eq('id', linkId);
+      if (error) throw error;
+      fetchStaff();
+    } catch (err) {
+      alert(err.message);
+    }
+  }, [fetchStaff]);
 
   const fetchClinics = useCallback(async () => {
+    // Keep this for the 'Registered Nodes' table if needed, or remove if unused
     try {
       const { data, error } = await supabase.from('clinics').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       setClinics(data || []);
     } catch (err) {
       console.error('Error fetching clinics:', err.message);
-    } finally {
-      setLoading(false);
     }
   }, []);
-
-  const handleAddClinic = useCallback(async (e) => {
-    e.preventDefault();
-    try {
-      const { error } = await supabase.from('clinics').insert([{ ...newClinic, profile_id: profile?.id }]);
-      if (error) throw error;
-      setIsAddOpen(false);
-      setNewClinic({ name: '', email: '', phone: '', clinic_id_no: '', address: '', city: '', state: '' });
+  
+  useEffect(() => { 
+    if (profile?.id) {
+      fetchStaff();
       fetchClinics();
-    } catch (err) {
-      alert(err.message);
     }
-  }, [newClinic, profile?.id, fetchClinics]);
+  }, [profile?.id, fetchStaff, fetchClinics]);
 
   const handleSignOut = useCallback(async () => { await signOut(); navigate('/login'); }, [signOut, navigate]);
   const handleNavClick = useCallback((label) => {
@@ -103,7 +182,7 @@ export default function ClinicDashboard() {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
 
   const STAT_CARDS = useMemo(() => [
-    { color: 'teal', icon: 'apartment', label: 'Clinic Branches', value: stats.branches },
+    { color: 'teal', icon: 'stethoscope', label: 'Total Doctors', value: stats.doctors },
     { color: 'cyan', icon: 'personal_injury', label: 'Total Patients', value: stats.patients },
     { color: 'emerald', icon: 'event_available', label: "Today's Visits", value: stats.todayVisits },
     { color: 'amber', icon: 'payments', label: 'Total Revenue', value: `Rs. ${stats.revenue}` },
@@ -219,63 +298,74 @@ export default function ClinicDashboard() {
         {/* Page Body */}
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
 
-          <Skeleton name="clinic-stats" loading={loading}>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-              {STAT_CARDS.map((s) => (
-                <div key={s.label}
-                  className={`bg-white p-4 sm:p-6 rounded-2xl border-l-4 border-${s.color}-500 flex items-center gap-3 sm:gap-4`}
-                  style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05),0 2px 4px -2px rgb(0 0 0/0.05)' }}>
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-${s.color}-50 rounded-xl flex items-center justify-center text-${s.color}-600 flex-shrink-0`}>
-                    <span className="material-symbols-outlined text-2xl sm:text-3xl">{s.icon}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">{s.label}</p>
-                    <h3 className="text-lg sm:text-2xl font-bold truncate">{s.value}</h3>
-                  </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {STAT_CARDS.map((s) => (
+              <div key={s.label}
+                className={`bg-white p-4 sm:p-6 rounded-2xl border-l-4 border-teal-500 flex items-center gap-3 sm:gap-4`}
+                style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05),0 2px 4px -2px rgb(0 0 0/0.05)' }}>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600 flex-shrink-0`}>
+                  <span className="material-symbols-outlined text-2xl sm:text-3xl">{s.icon}</span>
                 </div>
-              ))}
-            </div>
-          </Skeleton>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">{s.label}</p>
+                  <h3 className="text-lg sm:text-2xl font-bold truncate">{s.value}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Main Grid */}
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-8">
 
-            {/* Clinic Branches */}
+            {/* Staff Doctors */}
             <div className="xl:col-span-8 space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-teal-600">local_hospital</span> My Clinic Branches
+                  <span className="material-symbols-outlined text-teal-600">stethoscope</span> Staff Doctors
                 </h3>
                 <button onClick={() => setIsAddOpen(true)}
                   className="bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 transition-colors">
-                  <span className="material-symbols-outlined text-sm">add</span> Add Branch
+                  <span className="material-symbols-outlined text-sm">add</span> Link Doctor
                 </button>
               </div>
 
-              <Skeleton name="clinic-branches" loading={loading}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                  {MOCK_BRANCHES.map((branch) => (
-                    <div key={branch.id}
-                      className="bg-white p-5 sm:p-6 rounded-2xl text-center flex flex-col items-center group cursor-pointer hover:shadow-md transition-shadow"
-                      style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05),0 2px 4px -2px rgb(0 0 0/0.05)' }}>
-                      <div className="relative mb-4">
-                        <div className="w-20 h-20 rounded-full border-4 border-teal-50 bg-teal-100 flex items-center justify-center text-teal-600">
-                          <span className="material-symbols-outlined text-4xl">local_hospital</span>
+                  {staffDoctors.length > 0 ? (
+                    staffDoctors.map((link) => (
+                      <div key={link.id}
+                        className="bg-white p-5 sm:p-6 rounded-2xl text-center flex flex-col items-center group relative hover:shadow-md transition-shadow"
+                        style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05),0 2px 4px -2px rgb(0 0 0/0.05)' }}>
+                        <button 
+                          type="button"
+                          onClick={(e) => handleUnlinkDoctor(e, link.id)}
+                          className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all z-20 cursor-pointer"
+                          title="Unlink Doctor"
+                        >
+                          <span className="material-symbols-outlined text-lg">link_off</span>
+                        </button>
+                        <div className="relative mb-4">
+                          <div className="w-20 h-20 rounded-full border-4 border-teal-50 flex items-center justify-center bg-teal-600 text-white text-2xl font-bold font-mono">
+                            {link.doctors?.full_name?.charAt(0).toUpperCase() || 'D'}
+                          </div>
+                          <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white bg-green-500" />
                         </div>
-                        <span className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white ${branch.online ? 'bg-green-500' : 'bg-gray-300'}`} />
+                        <h4 className="font-bold text-gray-900 line-clamp-1">{link.doctors?.full_name}</h4>
+                        <p className="text-sm text-teal-600 font-medium mb-1">{link.doctors?.specialization}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Verified Partner</p>
+                        <button className="w-full mt-4 py-2 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors">
+                          Manage Availability
+                        </button>
                       </div>
-                      <h4 className="font-bold text-gray-900">{branch.name}</h4>
-                      <p className="text-sm text-teal-600 font-medium mb-1">{branch.specialty}</p>
-                      <p className="text-xs text-gray-500 mb-4">{branch.patients} patients</p>
-                      <button className="w-full py-2 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors mt-auto">
-                        View Details
-                      </button>
+                    ))
+                  ) : (
+                    <div className="sm:col-span-2 xl:col-span-3 py-12 text-center bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
+                      <span className="material-symbols-outlined text-4xl text-gray-300 mb-2">person_add</span>
+                      <p className="text-gray-500 text-sm font-medium">No linked doctors yet</p>
+                      <button onClick={() => setIsAddOpen(true)} className="mt-2 text-teal-600 text-xs font-bold hover:underline">Link your first doctor</button>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </Skeleton>
 
-                <Skeleton name="clinic-nodes" loading={loading}>
                   <div>
                     <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 mb-4 text-gray-700">
                       <span className="material-symbols-outlined text-teal-600">table_view</span> Registered Nodes
@@ -317,7 +407,6 @@ export default function ClinicDashboard() {
                       </table>
                     </div>
                   </div>
-                </Skeleton>
             </div>
 
             <div className="xl:col-span-4 space-y-6">
@@ -368,63 +457,50 @@ export default function ClinicDashboard() {
         </div>
       </main>
 
-      {/* Add Branch Modal */}
+      {/* Link Doctor Modal */}
       {isAddOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-teal-600 px-6 sm:px-8 py-4 sm:py-6 text-white">
-              <h2 className="text-lg sm:text-xl font-bold">Register New Branch</h2>
-              <p className="text-teal-100 text-xs sm:text-sm mt-1">Add a new clinic node to your network</p>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-teal-600 px-6 sm:px-8 py-5 text-white">
+              <h2 className="text-lg font-bold">Link New Doctor</h2>
+              <p className="text-teal-100 text-xs mt-1">Add a verified professional to your clinic team</p>
             </div>
-            <form onSubmit={handleAddClinic} className="p-6 sm:p-8 space-y-4 sm:space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Branch Name *</label>
-                  <input required className="w-full px-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={newClinic.name} onChange={e => setNewClinic({ ...newClinic, name: e.target.value })} placeholder="Downtown Clinic" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Email *</label>
-                  <input required type="email" className="w-full px-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={newClinic.email} onChange={e => setNewClinic({ ...newClinic, email: e.target.value })} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Phone</label>
-                  <input className="w-full px-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={newClinic.phone} onChange={e => setNewClinic({ ...newClinic, phone: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">License / ID</label>
-                  <input className="w-full px-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={newClinic.clinic_id_no} onChange={e => setNewClinic({ ...newClinic, clinic_id_no: e.target.value })} />
-                </div>
-              </div>
+            <form onSubmit={handleAddDoctor} className="p-6 sm:p-8 space-y-6">
               <div>
-                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Address</label>
-                <input className="w-full px-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  value={newClinic.address} onChange={e => setNewClinic({ ...newClinic, address: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">City</label>
-                  <input className="w-full px-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={newClinic.city} onChange={e => setNewClinic({ ...newClinic, city: e.target.value })} />
+                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Doctor's Unique Secret Key *</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">key</span>
+                  <input 
+                    required 
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all font-mono"
+                    value={doctorSecretKey} 
+                    onChange={e => setDoctorSecretKey(e.target.value.toUpperCase())} 
+                    placeholder="e.g. UPC-7B2A91" 
+                  />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">State</label>
-                  <input className="w-full px-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={newClinic.state} onChange={e => setNewClinic({ ...newClinic, state: e.target.value })} />
-                </div>
+                <p className="text-[10px] text-gray-400 mt-2 ml-1 leading-relaxed">Ask the doctor for their secret key from their Professional Profile settings.</p>
               </div>
+              
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setIsAddOpen(false)}
-                  className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddOpen(false)}
+                  disabled={addingDoctor}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="flex-1 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors">
-                  Register
+                <button 
+                  type="submit" 
+                  disabled={addingDoctor}
+                  className="flex-1 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {addingDoctor ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Linking...
+                    </>
+                  ) : 'Verify & Link'}
                 </button>
               </div>
             </form>

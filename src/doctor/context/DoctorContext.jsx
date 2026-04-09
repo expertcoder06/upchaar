@@ -40,6 +40,7 @@ const mapDoctorRecord = (record) => {
         status: record.status || 'Pending',
         medicalLicense: record.medical_license || '',
         nmcRegistration: record.nmc_registration || '',
+        secretKey: record.secret_key || '',
     };
 };
 
@@ -252,6 +253,8 @@ export function DoctorProvider({ children }) {
                 throw new Error('Failed to create user profile: ' + profileError.message);
             }
 
+            const generatedKey = `UPC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
             const { data: doctorRow, error: doctorError } = await supabase.from('doctors').insert({
                 profile_id: userId,
                 full_name: fullName.trim(),
@@ -271,6 +274,7 @@ export function DoctorProvider({ children }) {
                 total_revenue: 0,
                 experience: 0,
                 status: 'Pending',
+                secret_key: generatedKey
             }).select().single();
 
             if (doctorError) {
@@ -355,9 +359,28 @@ export function DoctorProvider({ children }) {
         return nextDoctor;
     }, [doctor?.id, doctorRecord?.id]);
 
+    const rotateSecretKey = useCallback(async () => {
+        if (!doctorRecord?.id) throw new Error('No doctor profile found.');
+        
+        const newKey = `UPC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        
+        const { data, error } = await supabase
+            .from('doctors')
+            .update({ secret_key: newKey, updated_at: new Date().toISOString() })
+            .eq('id', doctorRecord.id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        setDoctorRecord(data);
+        setDoctor(prev => ({ ...prev, secretKey: newKey }));
+        return newKey;
+    }, [doctorRecord?.id]);
+
     const contextValue = useMemo(() => ({
-        doctor, doctorRecord, login, register, logout, updateProfile, loading,
-    }), [doctor, doctorRecord, login, register, logout, updateProfile, loading]);
+        doctor, doctorRecord, login, register, logout, updateProfile, rotateSecretKey, loading,
+    }), [doctor, doctorRecord, login, register, logout, updateProfile, rotateSecretKey, loading]);
 
     return (
         <DoctorContext.Provider value={contextValue}>

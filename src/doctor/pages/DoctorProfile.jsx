@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDoctor } from '../context/DoctorContext.jsx';
-import { Save, Loader2, CheckCircle, User, Stethoscope, Clock, Building2 } from 'lucide-react';
+import { Save, Loader2, CheckCircle, User, Stethoscope, Clock, Building2, Copy, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SPECIALIZATIONS = [
@@ -14,7 +14,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const AVATAR_COLORS = ['#0d9488', '#6366f1', '#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#ef4444'];
 
 export default function DoctorProfile() {
-    const { doctor, updateProfile } = useDoctor();
+    const { doctor, updateProfile, rotateSecretKey } = useDoctor();
     const [form, setForm] = useState({
         fullName: doctor.fullName || '',
         phone: doctor.phone || '',
@@ -35,6 +35,27 @@ export default function DoctorProfile() {
     });
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [regenerating, setRegenerating] = useState(false);
+
+    const handleCopyKey = () => {
+        if (!doctor.secretKey) return;
+        navigator.clipboard.writeText(doctor.secretKey);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleRegenerateKey = async () => {
+        if (!confirm('Regenerating will invalidate your current key for FUTURE links. Existing links remain active. Proceed?')) return;
+        setRegenerating(true);
+        try {
+            await rotateSecretKey();
+        } catch (err) {
+            alert('Failed to regenerate key: ' + err.message);
+        } finally {
+            setRegenerating(false);
+        }
+    };
 
     const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -72,6 +93,45 @@ export default function DoctorProfile() {
             </div>
 
             <form onSubmit={handleSave} className="space-y-6">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-4">
+                        <div className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                            Private Key
+                        </div>
+                    </div>
+                    <h2 className="font-semibold text-slate-700 text-sm mb-1 flex items-center gap-2">
+                        <Building2 size={15} className="text-primary" /> Doctor Secret Key
+                    </h2>
+                    <p className="text-[11px] text-slate-500 mb-4">Share this unique key with clinics or medical centers to link your professional profile to their dashboard.</p>
+                    
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-mono text-sm text-slate-700 select-all min-h-[44px] flex items-center">
+                            {doctor.secretKey || 'Generating...'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleCopyKey}
+                                className={cn(
+                                    "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border min-h-[44px]",
+                                    copied ? "bg-emerald-50 border-emerald-200 text-emerald-600" : "bg-white border-slate-200 text-slate-600 hover:border-primary/40 hover:bg-slate-50"
+                                )}
+                            >
+                                {copied ? <CheckCircle size={15} /> : <Copy size={15} />}
+                                {copied ? 'Copied' : 'Copy'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleRegenerateKey}
+                                className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/40 hover:bg-slate-50 transition-all"
+                                title="Regenerate Key"
+                            >
+                                <RefreshCw size={18} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                     <h2 className="font-semibold text-slate-700 text-sm mb-4">Avatar Color</h2>
                     <div className="flex items-center gap-4">

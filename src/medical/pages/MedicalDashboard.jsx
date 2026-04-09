@@ -4,14 +4,7 @@ import { supabase } from '@/lib/supabase.js';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from 'boneyard-js/react';
 
-const MOCK_DOCTORS = [
-  { id: 1, name: 'Dr. Anjali Sharma', specialty: 'Cardiologist', fee: 'Rs. 800', online: true,
-    avatar: 'https://ui-avatars.com/api/?name=Anjali+Sharma&background=0d9488&color=fff&size=80' },
-  { id: 2, name: 'Dr. Rajesh Gupta', specialty: 'Pediatrician', fee: 'Rs. 600', online: true,
-    avatar: 'https://ui-avatars.com/api/?name=Rajesh+Gupta&background=0d9488&color=fff&size=80' },
-  { id: 3, name: 'Dr. Amali Gupta', specialty: 'Dermatologist', fee: 'Rs. 1000', online: false,
-    avatar: 'https://ui-avatars.com/api/?name=Amali+Gupta&background=0d9488&color=fff&size=80' },
-];
+// Staff doctors will be fetched from database
 
 const MOCK_ACTIVITY = [
   { id: 1, title: 'Appt. Booked: Rahul Varma', sub: 'with Dr. Anjali Sharma', time: 'Today, 10:30 AM', badge: 'CONFIRMED', badgeClass: 'bg-teal-50 text-teal-700 border border-teal-100', isLast: false },
@@ -32,14 +25,18 @@ const NAV_ITEMS = [
 export default function MedicalDashboard() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [staffDoctors, setStaffDoctors] = useState([]);
   const [medicals, setMedicals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [doctorSecretKey, setDoctorSecretKey] = useState('');
+  const [addingDoctor, setAddingDoctor] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); 
   const sidebarRef = useRef(null);
 
-  const stats = useMemo(() => ({ totalDoctors: 35, totalPatients: 1200, todayAppointments: 80, totalRevenue: '5,50,000' }), []);
+  const stats = useMemo(() => ({ totalDoctors: staffDoctors.length, totalPatients: 0, todayAppointments: 0, totalRevenue: '0' }), [staffDoctors.length]);
   const circumference = useMemo(() => 2 * Math.PI * 54, []);
 
   // Handle mobile resize
@@ -62,19 +59,114 @@ export default function MedicalDashboard() {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [sidebarOpen]);
 
-  useEffect(() => { fetchMedicals(); }, []);
+
+
+  const fetchStaff = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('staff_links')
+        .select(`
+          id,
+          doctor_id,
+          doctors (
+            id,
+            full_name,
+            specialization,
+            consultation_fee
+          )
+        `)
+        .eq('organization_id', profile?.id);
+
+      if (error) throw error;
+      setStaffDoctors(data || []);
+    } catch (err) {
+      console.error('Error fetching staff:', err.message);
+      // alert('Could not load staff list: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.id]);
+
+  const handleAddDoctor = useCallback(async (e) => {
+    e.preventDefault();
+    if (!doctorSecretKey.trim()) return;
+    
+    setAddingDoctor(true);
+    let cleanKey = doctorSecretKey.trim().toUpperCase();
+    if (cleanKey && !cleanKey.startsWith('UPC-')) {
+      cleanKey = `UPC-${cleanKey}`;
+    }
+
+    try {
+      // 1. Find doctor by secret key
+      const { data: doctor, error: findError } = await supabase
+        .from('doctors')
+        .select('id, full_name')
+        .eq('secret_key', cleanKey)
+        .maybeSingle();
+
+      if (findError) throw findError;
+      if (!doctor) throw new Error('Wrong Key. Please ask the doctor for the right key.');
+
+      // 2. Insert link
+      const { error: linkError } = await supabase
+        .from('staff_links')
+        .insert([{
+          doctor_id: doctor.id,
+          organization_id: profile?.id,
+          organization_type: 'medical'
+        }]);
+
+      if (linkError) {
+        if (linkError.code === '23505') throw new Error(`${doctor.full_name} is already linked to your center.`);
+        throw linkError;
+      }
+
+      alert(`${doctor.full_name} is successfully added in your medical center`);
+      setIsAddOpen(false);
+      setDoctorSecretKey('');
+      fetchStaff();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setAddingDoctor(false);
+    }
+  }, [doctorSecretKey, profile?.id, fetchStaff]);
+
+  const handleUnlinkDoctor = useCallback(async (e, linkId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('Warning: This doctor will be removed from your clinic staff and patients will no longer be able to see this doctor linked with your medical center. Do you want to continue?')) return;
+    try {
+      const { error } = await supabase
+        .from('staff_links')
+        .delete()
+        .eq('id', linkId);
+      if (error) throw error;
+      fetchStaff();
+    } catch (err) {
+      alert(err.message);
+    }
+  }, [fetchStaff]);
 
   const fetchMedicals = useCallback(async () => {
+    // Keep for potential usage in Registered Nodes table
     try {
       const { data, error } = await supabase.from('medicals').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       setMedicals(data || []);
     } catch (err) {
       console.error('Error fetching medicals:', err.message);
-    } finally {
-      setLoading(false);
     }
   }, []);
+
+  useEffect(() => { 
+    if (profile?.id) {
+      fetchStaff();
+      fetchMedicals();
+    }
+  }, [profile?.id, fetchStaff, fetchMedicals]);
 
   const handleSignOut = useCallback(async () => { await signOut(); navigate('/login'); }, [signOut, navigate]);
   const handleNavClick = useCallback((label) => {
@@ -191,23 +283,21 @@ export default function MedicalDashboard() {
         {/* Page Body */}
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
           {/* Stats */}
-          <Skeleton name="medical-stats" loading={loading}>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-              {STAT_CARDS.map((s) => (
-                <div key={s.label}
-                  className={`bg-white p-4 sm:p-6 rounded-2xl border-l-4 border-${s.color}-500 flex items-center gap-3 sm:gap-4`}
-                  style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05)' }}>
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-${s.color}-50 rounded-xl flex items-center justify-center text-${s.color}-600 flex-shrink-0`}>
-                    <span className="material-symbols-outlined text-2xl sm:text-3xl">{s.icon}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">{s.label}</p>
-                    <h3 className="text-lg sm:text-2xl font-bold truncate">{s.value}</h3>
-                  </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {STAT_CARDS.map((s) => (
+              <div key={s.label}
+                className={`bg-white p-4 sm:p-6 rounded-2xl border-l-4 border-teal-500 flex items-center gap-3 sm:gap-4`}
+                style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05)' }}>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600 flex-shrink-0`}>
+                  <span className="material-symbols-outlined text-2xl sm:text-3xl">{s.icon}</span>
                 </div>
-              ))}
-            </div>
-          </Skeleton>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">{s.label}</p>
+                  <h3 className="text-lg sm:text-2xl font-bold truncate">{s.value}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Grid */}
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-8">
@@ -216,31 +306,48 @@ export default function MedicalDashboard() {
                 <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
                   <span className="material-symbols-outlined text-teal-600">health_and_safety</span> My Doctors
                 </h3>
-                <button className="bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 transition-colors">
-                  <span className="material-symbols-outlined text-sm">add</span> New
+                <button onClick={() => setIsAddOpen(true)}
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 transition-colors">
+                  <span className="material-symbols-outlined text-sm">add</span> Link Doctor
                 </button>
               </div>
-              <Skeleton name="medical-doctors" loading={loading}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                  {MOCK_DOCTORS.map((doc) => (
-                    <div key={doc.id}
-                      className="bg-white p-5 sm:p-6 rounded-2xl text-center flex flex-col items-center"
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                {staffDoctors.length > 0 ? (
+                  staffDoctors.map((link) => (
+                    <div key={link.id}
+                      className="bg-white p-5 sm:p-6 rounded-2xl text-center flex flex-col items-center group relative hover:shadow-md transition-shadow"
                       style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05)' }}>
+                      <button 
+                        type="button"
+                        onClick={(e) => handleUnlinkDoctor(e, link.id)}
+                        className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all z-20 cursor-pointer"
+                        title="Unlink Doctor"
+                      >
+                        <span className="material-symbols-outlined text-lg">link_off</span>
+                      </button>
                       <div className="relative mb-4">
-                        <img src={doc.avatar} alt={doc.name} className="w-20 h-20 rounded-full border-4 border-teal-50 object-cover" />
-                        <span className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white ${doc.online ? 'bg-green-500' : 'bg-gray-300'}`} />
+                        <div className="w-20 h-20 rounded-full border-4 border-teal-50 flex items-center justify-center bg-teal-600 text-white text-2xl font-bold font-mono">
+                          {link.doctors?.full_name?.charAt(0).toUpperCase() || 'D'}
+                        </div>
+                        <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white bg-green-500" />
                       </div>
-                      <h4 className="font-bold text-gray-900">{doc.name}</h4>
-                      <p className="text-sm text-teal-600 font-medium mb-1">{doc.specialty}</p>
+                      <h4 className="font-bold text-gray-900 line-clamp-1">{link.doctors?.full_name}</h4>
+                      <p className="text-sm text-teal-600 font-medium mb-1">{link.doctors?.specialization}</p>
+                      <p className="text-xs text-gray-500 mb-4">Fee: Rs. {link.doctors?.consultation_fee || '—'}</p>
                       <button className="w-full py-2 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors mt-auto">
-                        Profile
+                        View Activity
                       </button>
                     </div>
-                  ))}
-                </div>
-              </Skeleton>
+                  ))
+                ) : (
+                  <div className="sm:col-span-2 xl:col-span-3 py-10 text-center bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
+                    <span className="material-symbols-outlined text-3xl text-gray-300 mb-2">person_add</span>
+                    <p className="text-gray-500 text-xs font-medium">Link your partner doctors</p>
+                    <button onClick={() => setIsAddOpen(true)} className="mt-2 text-teal-600 text-xs font-bold hover:underline">Get Started</button>
+                  </div>
+                )}
+              </div>
 
-                <Skeleton name="medical-stores" loading={loading}>
                   <div>
                     <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 mb-4">
                       <span className="material-symbols-outlined text-teal-600">local_pharmacy</span> Partner Stores
@@ -279,7 +386,6 @@ export default function MedicalDashboard() {
                       </table>
                     </div>
                   </div>
-                </Skeleton>
             </div>
 
             <div className="xl:col-span-4 space-y-6">
@@ -321,7 +427,6 @@ export default function MedicalDashboard() {
               <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
                 <span className="material-symbols-outlined text-teal-600">history</span> Activity
               </h3>
-              <Skeleton name="medical-activity" loading={loading}>
                 <div className="bg-white rounded-2xl p-5 sm:p-6" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05)' }}>
                   {MOCK_ACTIVITY.map((item) => (
                     <div key={item.id} className="flex gap-4 mb-6 last:mb-0">
@@ -336,11 +441,60 @@ export default function MedicalDashboard() {
                     </div>
                   ))}
                 </div>
-              </Skeleton>
             </div>
           </div>
         </div>
       </main>
+      {/* Link Doctor Modal */}
+      {isAddOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-teal-600 px-6 sm:px-8 py-5 text-white">
+              <h2 className="text-lg font-bold">Link New Doctor</h2>
+              <p className="text-teal-100 text-xs mt-1">Connect a professional to your medical center</p>
+            </div>
+            <form onSubmit={handleAddDoctor} className="p-6 sm:p-8 space-y-6">
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Doctor's Secret Key *</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">key</span>
+                  <input 
+                    required 
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all font-mono"
+                    value={doctorSecretKey} 
+                    onChange={e => setDoctorSecretKey(e.target.value.toUpperCase())} 
+                    placeholder="e.g. UPC-7B2A91" 
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2 ml-1 leading-relaxed">Ask the doctor for their unique secret key to establish a secure link.</p>
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddOpen(false)}
+                  disabled={addingDoctor}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={addingDoctor}
+                  className="flex-1 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {addingDoctor ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Linking...
+                    </>
+                  ) : 'Verify & Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
