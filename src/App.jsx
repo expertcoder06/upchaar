@@ -19,6 +19,8 @@
  */
 
 import { BrowserRouter as Router } from 'react-router-dom';
+import { SkeletonTheme } from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 // ── Portal-specific context providers ────────────
 import { PatientProvider } from '@/patient/context/PatientContext.jsx';
@@ -37,25 +39,27 @@ import { AppRoutes } from '@/routes/index.jsx';
 function App() {
   return (
     <Router>
-      {/*
-        AuthProvider is INSIDE <Router> so that components that use
-        useAuth() + useNavigate() (e.g. Landing Header sign-out) work correctly.
-      */}
-      <AuthProvider>
-        <PatientProvider>
-          <DoctorProvider>
-            <BlogProvider>
-              <AdminProvider>
-                <MedicalProvider>
-                  <ClinicProvider>
-                    <AppRoutes />
-                  </ClinicProvider>
-                </MedicalProvider>
-              </AdminProvider>
-            </BlogProvider>
-          </DoctorProvider>
-        </PatientProvider>
-      </AuthProvider>
+      <SkeletonTheme baseColor="#e2e8f0" highlightColor="#f1f5f9">
+        {/*
+          AuthProvider is INSIDE <Router> so that components that use
+          useAuth() + useNavigate() (e.g. Landing Header sign-out) work correctly.
+        */}
+        <AuthProvider>
+          <PatientProvider>
+            <DoctorProvider>
+              <BlogProvider>
+                <AdminProvider>
+                  <MedicalProvider>
+                    <ClinicProvider>
+                      <AppRoutes />
+                    </ClinicProvider>
+                  </MedicalProvider>
+                </AdminProvider>
+              </BlogProvider>
+            </DoctorProvider>
+          </PatientProvider>
+        </AuthProvider>
+      </SkeletonTheme>
     </Router>
   );
 }

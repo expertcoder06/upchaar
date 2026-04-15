@@ -7,7 +7,7 @@ import {
 import { supabase } from '@/lib/supabase.js';
 import { useDoctor } from '../context/DoctorContext.jsx';
 import { cn } from '@/lib/utils';
-import { Skeleton } from 'boneyard-js/react';
+import Skeleton from 'react-loading-skeleton';
 
 const parseClinics = (clinicValue) => {
     if (!clinicValue) return [];
@@ -121,15 +121,21 @@ export default function DoctorDashboard() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {statCards.map(card => (
-                    <div key={card.label} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
-                        <div className={cn('h-11 w-11 rounded-2xl flex items-center justify-center mb-4', card.tone)}>
-                            <card.icon size={20} />
+                {loading ? (
+                    Array(4).fill(0).map((_, i) => (
+                        <Skeleton key={i} height={120} borderRadius={24} />
+                    ))
+                ) : (
+                    statCards.map(card => (
+                        <div key={card.label} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+                            <div className={cn('h-11 w-11 rounded-2xl flex items-center justify-center mb-4', card.tone)}>
+                                <card.icon size={20} />
+                            </div>
+                            <p className="text-sm text-slate-500">{card.label}</p>
+                            <p className="text-2xl font-bold text-slate-800 mt-1">{card.value}</p>
                         </div>
-                        <p className="text-sm text-slate-500">{card.label}</p>
-                        <p className="text-2xl font-bold text-slate-800 mt-1">{card.value}</p>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -141,7 +147,12 @@ export default function DoctorDashboard() {
                         </div>
                     </div>
 
-                    {clinicCards.length === 0 ? (
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Skeleton height={180} borderRadius={24} />
+                            <Skeleton height={180} borderRadius={24} />
+                        </div>
+                    ) : clinicCards.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center">
                             <Building2 size={28} className="mx-auto text-slate-300 mb-3" />
                             <p className="text-sm font-medium text-slate-500">No clinic added yet.</p>
@@ -220,9 +231,11 @@ export default function DoctorDashboard() {
                 </div>
             </div>
 
-            <Skeleton name="appointments" loading={loading}>
-                <div className="text-sm text-slate-400">Appointments ready.</div>
-            </Skeleton>
+            {loading && (
+                <div className="mt-6">
+                    <Skeleton height={40} borderRadius={12} />
+                </div>
+            )}
         </div>
     );
 }

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { fetchDashboardStats, fetchDoctors, fetchAppointments } from '@/lib/adminApi.js';
 import { format } from 'date-fns';
-import { Skeleton } from 'boneyard-js/react';
+import Skeleton from 'react-loading-skeleton';
 
 const STATUS_PIE_COLORS = {
     Completed: '#10b981',
@@ -102,7 +102,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                     <h2 className="font-semibold text-slate-800 mb-4">Appointment Status Overview</h2>
-                    <Skeleton name="appointment-overview" loading={loading}>
+                    {loading ? <Skeleton height={100} borderRadius={16} /> : (
                         <div className="grid grid-cols-3 gap-4">
                             {Object.entries({ Completed: '#10b981', Pending: '#f59e0b', Cancelled: '#ef4444' }).map(([label, color]) => {
                                 const count = recentAppointments.filter(a => a.status === label).length;
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
                                 );
                             })}
                         </div>
-                    </Skeleton>
+                    )}
                 </div>
 
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
                             View all <ArrowUpRight size={11} />
                         </a>
                     </div>
-                    <Skeleton name="pending-doctors" loading={loading}>
+                    {loading ? <Skeleton count={3} height={50} className="mb-2" borderRadius={12} /> : (
                         <div className="space-y-3">
                             {pendingDoctors.length === 0 ? (
                                 <p className="text-sm text-slate-400 text-center py-4">No pending applications</p>
@@ -171,7 +171,7 @@ export default function AdminDashboard() {
                                 </div>
                             ))}
                         </div>
-                    </Skeleton>
+                    )}
                 </div>
 
                 {/* Recent Appointments */}
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
                             View all <ArrowUpRight size={11} />
                         </a>
                     </div>
-                    <Skeleton name="recent-appointments" loading={loading}>
+                    {loading ? <Skeleton count={4} height={50} className="mb-2" borderRadius={12} /> : (
                         <div className="space-y-3">
                             {recentAppointments.length === 0 ? (
                                 <p className="text-sm text-slate-400 text-center py-4">No appointments yet</p>
@@ -205,7 +205,7 @@ export default function AdminDashboard() {
                                 );
                             })}
                         </div>
-                    </Skeleton>
+                    )}
                 </div>
             </div>
         </div>

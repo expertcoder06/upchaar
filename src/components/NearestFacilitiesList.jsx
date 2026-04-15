@@ -26,10 +26,10 @@ export default function NearestFacilitiesList({ facilities, onFacilitySelect, us
                 <CardContent>
                     {[...Array(5)].map((_, i) => (
                         <div key={i} className="flex items-center gap-4 p-2">
-                            <Skeleton className="w-10 h-10 rounded-full" />
+                            <Skeleton circle width={40} height={40} />
                             <div className="flex-1 space-y-2">
-                                <Skeleton className="h-4 w-3/4" />
-                                <Skeleton className="h-3 w-1/2" />
+                                <Skeleton width="75%" height={16} />
+                                <Skeleton width="50%" height={12} />
                             </div>
                         </div>
                     ))}

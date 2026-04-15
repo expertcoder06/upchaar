@@ -19,8 +19,7 @@ import {
 import { uploadAvatar } from '@/lib/uploadImage.js';
 import { supabase } from '@/lib/supabase.js';
 import ChangePasswordModal from '@/components/ChangePasswordModal.jsx';
-import { Skeleton } from 'boneyard-js/react';
-
+import Skeleton from 'react-loading-skeleton';
 // ── Quick action cards shown on the dashboard ─────
 const QUICK_ACTIONS = [
     { icon: Calendar, label: 'Book Appointment', desc: 'Schedule with a doctor', color: 'from-blue-500 to-indigo-500', href: '/doctors' },
@@ -137,12 +136,7 @@ const AppointmentsBanner = React.memo(function AppointmentsBanner({ patientId })
         return (
             <div className="mb-8">
                 <h2 className="text-base font-semibold text-slate-700 mb-4">Upcoming Appointments</h2>
-                <Skeleton name="patient-appointment-banner" loading={true}>
-                    <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                        <Loader2 size={18} className="animate-spin text-teal-500" />
-                        <span className="text-sm text-slate-500">Loading appointments…</span>
-                    </div>
-                </Skeleton>
+                <Skeleton height={120} borderRadius={16} />
             </div>
         );
     }
@@ -241,9 +235,9 @@ export default function PatientDashboard() {
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 p-8 space-y-8">
-                <Skeleton name="patient-hero" loading={true} />
-                <Skeleton name="patient-quick-actions" loading={true} />
-                <Skeleton name="patient-profile" loading={true} />
+                <Skeleton height={150} borderRadius={24} />
+                <Skeleton height={200} borderRadius={16} />
+                <Skeleton height={300} borderRadius={16} />
             </div>
         );
     }
@@ -261,7 +255,6 @@ export default function PatientDashboard() {
             <div className="space-y-8">
 
                 {/* ── Welcome hero ──────────────────── */}
-                <Skeleton name="patient-hero" loading={loading}>
                     <motion.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -328,14 +321,12 @@ export default function PatientDashboard() {
                             </span>
                         </div>
                     </motion.div>
-                </Skeleton>
 
                 {/* ── Upcoming Appointments Banner ─── */}
                 <AppointmentsBanner patientId={patient.id} />
 
                 {/* ── Quick actions grid ────────────── */}
                 <h2 className="text-base font-semibold text-slate-700 mb-4">Quick Actions</h2>
-                <Skeleton name="patient-quick-actions" loading={loading}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                         {QUICK_ACTIONS.map(({ icon: Icon, label, desc, color, href }, i) => (
                             <motion.div
@@ -360,11 +351,9 @@ export default function PatientDashboard() {
                             </motion.div>
                         ))}
                     </div>
-                </Skeleton>
 
                 {/* ── Profile info card ─────────────── */}
                 <h2 className="text-base font-semibold text-slate-700 mb-4">Your Profile</h2>
-                <Skeleton name="patient-profile" loading={loading}>
                     <motion.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -402,7 +391,6 @@ export default function PatientDashboard() {
                             </button>
                         </div>
                     </motion.div>
-                </Skeleton>
             </div>
             <ChangePasswordModal isOpen={changePwOpen} onClose={() => setChangePwOpen(false)} />
         </>

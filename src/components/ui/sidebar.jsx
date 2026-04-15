@@ -561,7 +561,6 @@ const SidebarMenuBadge = React.forwardRef(({ className, ...props }, ref) => (
 SidebarMenuBadge.displayName = "SidebarMenuBadge"
 
 const SidebarMenuSkeleton = React.forwardRef(({ className, showIcon = false, ...props }, ref) => {
-    // Random width between 50 to 90%.
     const width = React.useMemo(() => {
         return `${Math.floor(Math.random() * 40) + 50}%`
     }, [])
@@ -575,18 +574,18 @@ const SidebarMenuSkeleton = React.forwardRef(({ className, showIcon = false, ...
         >
             {showIcon && (
                 <Skeleton
-                    className="size-4 rounded-md"
+                    width={16}
+                    height={16}
+                    borderRadius={4}
                     data-sidebar="menu-skeleton-icon"
                 />
             )}
             <Skeleton
-                className="h-4 flex-1 max-w-[--skeleton-width]"
+                width={width}
+                height={16}
+                borderRadius={4}
                 data-sidebar="menu-skeleton-text"
-                style={
-                    {
-                        "--skeleton-width": width,
-                    }
-                }
+                containerClassName="flex-1"
             />
         </div>
     )

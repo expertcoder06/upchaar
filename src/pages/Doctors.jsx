@@ -25,7 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase.js';
-import { Skeleton } from 'boneyard-js/react';
+import Skeleton from 'react-loading-skeleton';
 
 export default function DoctorsPage() {
     const [allDoctors, setAllDoctors] = useState([]);
@@ -231,7 +231,13 @@ export default function DoctorsPage() {
                         )}
                     </div>
 
-                    <Skeleton name="doctor-cards" loading={loading} className="py-12">
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {[...Array(4)].map((_, i) => (
+                                <Skeleton key={i} height={350} borderRadius={24} />
+                            ))}
+                        </div>
+                    ) : (
                         <motion.div
                             className="grid grid-cols-1 md:grid-cols-2 gap-6"
                             variants={containerVariants}
@@ -259,7 +265,7 @@ export default function DoctorsPage() {
                                 )}
                             </AnimatePresence>
                         </motion.div>
-                    </Skeleton>
+                    )}
                 </div>
             </div>
 
