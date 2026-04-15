@@ -134,12 +134,35 @@ export default function LoginPage() {
                 if (waTaken) throw new Error('This WhatsApp number is already registered.');
             }
 
-            const e164 = await sendOtp(signUpForm.phone);
-            setOtpPhone(e164);
-            setOtp(['','','','','','']);
-            setOtpError('');
-            setResendCooldown(RESEND_COOLDOWN);
-            setSignupStep('otp');
+            // Bypass OTP
+            // const e164 = await sendOtp(signUpForm.phone);
+            // setOtpPhone(e164);
+            // setOtp(['','','','','','']);
+            // setOtpError('');
+            // setResendCooldown(RESEND_COOLDOWN);
+            // setSignupStep('otp');
+            
+            await signUp({
+                fullName:       signUpForm.fullName,
+                email:          signUpForm.email,
+                phone:          signUpForm.phone,
+                whatsappNumber: signUpForm.whatsappNumber,
+                password:       signUpForm.password,
+                profileType:    signUpForm.profileType,
+            });
+
+            setSignupStep('done');
+            setShowSuccessModal(true);
+
+            setTimeout(() => {
+                setShowSuccessModal(false);
+                setTab('signin');
+                setSignupStep('form');
+                setSuccess(`🎉 Account created! Please sign in${signUpForm.profileType === 'doctor' ? ' — pending admin review.' : '.'}`);
+                setSignUpForm({ fullName:'', email:'', phone:'', whatsappNumber:'', password:'', confirmPassword:'', profileType:'patient' });
+                setOtp(['','','','','','']);
+            }, 2200);
+
         } catch (err) {
             setError(err.message || 'Failed to send OTP.');
         } finally {
@@ -454,7 +477,6 @@ export default function LoginPage() {
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-600 mb-2">
                                             Phone Number <span className="text-red-500">*</span>
-                                            <span className="text-slate-400 font-normal ml-1">(OTP will be sent)</span>
                                         </label>
                                         <div className="relative">
                                             <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -507,8 +529,8 @@ export default function LoginPage() {
                                 <button type="submit" disabled={loading}
                                     className="w-full py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-semibold text-sm hover:shadow-lg hover:shadow-teal-400/25 hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-1">
                                     {loading
-                                        ? <><Loader2 size={16} className="animate-spin" />Sending OTP…</>
-                                        : <><ShieldCheck size={16} />Send OTP & Continue</>}
+                                        ? <><Loader2 size={16} className="animate-spin" />Creating Account…</>
+                                        : <><ShieldCheck size={16} />Create Account</>}
                                 </button>
 
                                 <p className="text-center text-sm text-slate-500">

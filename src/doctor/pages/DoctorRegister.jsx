@@ -138,12 +138,24 @@ export default function DoctorRegister() {
             const { data: registrationCheck } = await supabase.from('doctors').select('profile_id').eq('nmc_registration', form.nmcRegistration.trim()).maybeSingle();
             if (registrationCheck) throw new Error('NMC/MCI Registration Number is already registered.');
 
-            const e164 = await sendOtp(form.phone);
-            setOtpPhone(e164);
-            setOtp(['','','','','','']);
-            setOtpError('');
-            setResendCooldown(RESEND_COOLDOWN);
-            setStep('otp');
+            // Bypass OTP
+            // const e164 = await sendOtp(form.phone);
+            // setOtpPhone(e164);
+            // setOtp(['','','','','','']);
+            // setOtpError('');
+            // setResendCooldown(RESEND_COOLDOWN);
+            // setStep('otp');
+
+            await register({
+                fullName: form.fullName, email: form.email, phone: form.phone,
+                whatsappNumber: form.whatsappNumber, password: form.password,
+                specialization: form.specialization, city: form.city,
+                clinicName: form.clinicName, fee: Number(form.fee),
+                medicalLicense: form.medicalLicense, nmcRegistration: form.nmcRegistration,
+                dob: form.dob, availableDays: form.availableDays,
+                hoursFrom: form.hoursFrom, hoursTo: form.hoursTo,
+            });
+            navigate('/doctor/dashboard', { replace: true });
         } catch (err) {
             setError(err.message);
         } finally {
@@ -254,7 +266,6 @@ export default function DoctorRegister() {
                                     <div key={name} className={name === 'clinicName' ? 'md:col-span-2' : ''}>
                                         <label className="block text-xs font-semibold text-slate-600 mb-2">
                                             {label} {required && <span className="text-red-400">*</span>}
-                                            {name === 'phone' && <span className="text-slate-400 font-normal text-[10px] ml-1">(OTP sent)</span>}
                                         </label>
                                         <div className="relative">
                                             {Icon && <Icon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />}
@@ -339,7 +350,7 @@ export default function DoctorRegister() {
 
                             <button type="submit" disabled={loading}
                                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary to-teal-400 text-white font-semibold text-sm hover:shadow-lg hover:shadow-primary/25 hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2">
-                                {loading ? <><Loader2 size={16} className="animate-spin" />Sending OTP…</> : <><ShieldCheck size={16} />Send OTP & Continue</>}
+                                {loading ? <><Loader2 size={16} className="animate-spin" />Registering…</> : <><ShieldCheck size={16} />Create Account</>}
                             </button>
                         </form>
                         )}

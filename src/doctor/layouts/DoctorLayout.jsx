@@ -6,7 +6,7 @@ import {
     UserCircle, LogOut, ChevronLeft, ChevronRight, Stethoscope,
     Bell, Search, MessageSquare, Menu, X, KeyRound, Landmark,
 } from 'lucide-react';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChangePasswordModal from '@/components/ChangePasswordModal.jsx';
@@ -55,24 +55,18 @@ export default function DoctorLayout() {
 
     return (
         <>
-        <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-            {/* Ambient Background */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute -top-40 -right-40 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl opacity-50" />
-                <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl opacity-50" />
-            </div>
-
             {/* ── Mobile overlay drawer ───────────────────────────── */}
             <AnimatePresence>
                 {mobileOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setMobileOpen(false)}
-                            className="fixed inset-0 bg-black/40 z-30 lg:hidden" />
-                        <motion.aside
-                            initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
-                            transition={{ duration: 0.25, ease: 'easeInOut' }}
-                            className="fixed left-0 top-0 h-full w-64 bg-white/95 backdrop-blur-xl border-r border-white/50 shadow-2xl z-40 lg:hidden flex flex-col">
+                    <motion.div key="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setMobileOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-[100] lg:hidden" />
+                )}
+                {mobileOpen && (
+                    <motion.aside key="drawer"
+                        initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="fixed left-0 top-0 h-full w-64 bg-white/95 backdrop-blur-xl border-r border-white/50 shadow-2xl z-[110] lg:hidden flex flex-col">
                             {/* Mobile drawer header */}
                             <div className="flex items-center justify-between px-6 py-6 h-20 flex-shrink-0">
                                 <div className="flex items-center gap-3">
@@ -128,9 +122,17 @@ export default function DoctorLayout() {
                                 </button>
                             </div>
                         </motion.aside>
-                    </>
                 )}
             </AnimatePresence>
+
+        <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+            {/* Ambient Background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute -top-40 -right-40 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl opacity-50" />
+                <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl opacity-50" />
+            </div>
+
+
 
             {/* Sidebar (Glassmorphic) — desktop only */}
             <motion.aside
@@ -292,7 +294,13 @@ export default function DoctorLayout() {
                 <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 relative">
                     {/* Add subtle fade at the top for smooth scrolling effect */}
                     <div className="fixed top-20 left-0 right-0 h-6 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
-                    <Outlet />
+                    <Suspense fallback={
+                        <div className="h-full w-full flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-teal-500 animate-spin" />
+                        </div>
+                    }>
+                        <Outlet />
+                    </Suspense>
                 </main>
 
                 {/* Secure Chat FAB */}

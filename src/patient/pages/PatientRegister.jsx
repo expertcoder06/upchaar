@@ -93,12 +93,16 @@ export default function PatientRegister() {
                 const { data: waTaken } = await supabase.rpc('is_whatsapp_taken', { p_wa: form.whatsappNumber.trim() });
                 if (waTaken) throw new Error('This WhatsApp number is already registered.');
             }
-            const e164 = await sendOtp(form.phone);
-            setOtpPhone(e164);
-            setOtp(['','','','','','']);
-            setOtpError('');
-            setResendCooldown(RESEND_COOLDOWN);
-            setStep('otp');
+            // Bypass OTP for now
+            // const e164 = await sendOtp(form.phone);
+            // setOtpPhone(e164);
+            // setOtp(['','','','','','']);
+            // setOtpError('');
+            // setResendCooldown(RESEND_COOLDOWN);
+            // setStep('otp');
+            
+            await signUp({ fullName: form.fullName, email: form.email, phone: form.phone, whatsappNumber: form.whatsappNumber, password: form.password });
+            navigate('/patient/dashboard', { replace: true });
         } catch (err) {
             setError(err.message);
         } finally {
@@ -289,8 +293,8 @@ export default function PatientRegister() {
                             <button type="submit" disabled={loading}
                                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-semibold text-sm hover:shadow-lg hover:shadow-emerald-400/25 hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2">
                                 {loading
-                                    ? <><Loader2 size={16} className="animate-spin" />Sending OTP…</>
-                                    : <><ShieldCheck size={16} />Send OTP & Continue</>}
+                                    ? <><Loader2 size={16} className="animate-spin" />Registering…</>
+                                    : <><ShieldCheck size={16} />Create Account</>}
                             </button>
                         </form>
                         )}
