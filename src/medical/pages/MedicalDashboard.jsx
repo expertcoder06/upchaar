@@ -3,6 +3,7 @@ import { useAuth } from '@/auth/AuthContext.jsx';
 import { supabase } from '@/lib/supabase.js';
 import { useNavigate } from 'react-router-dom';
 import DoctorAppointmentsModal from '@/components/dashboard/DoctorAppointmentsModal';
+import EditProfileModal from '@/components/EditProfileModal.jsx';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
@@ -18,7 +19,6 @@ const NAV_ITEMS = [
   { icon: 'dashboard', label: 'Dashboard' },
   { icon: 'medical_information', label: 'Doctors' },
   { icon: 'person', label: 'Patients' },
-  { icon: 'calendar_today', label: 'Appointments' },
   { icon: 'notifications', label: 'Notifications' },
   { icon: 'analytics', label: 'Analytics' },
   { icon: 'settings', label: 'Settings' },
@@ -33,6 +33,7 @@ export default function MedicalDashboard() {
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [doctorSecretKey, setDoctorSecretKey] = useState('');
   const [addingDoctor, setAddingDoctor] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true); 
@@ -300,14 +301,6 @@ export default function MedicalDashboard() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-200 space-y-1 min-w-[256px]">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg">
-            <span className="material-symbols-outlined text-xl">lock</span> Change Password
-          </button>
-          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">
-            <span className="material-symbols-outlined text-xl">logout</span> Sign Out
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}
@@ -353,6 +346,8 @@ export default function MedicalDashboard() {
 
         {/* Page Body */}
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+          {activeNav === 'Dashboard' ? (
+            <>
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {loading ? (
@@ -552,41 +547,6 @@ export default function MedicalDashboard() {
 
             <div className="xl:col-span-4 space-y-6">
               <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined text-teal-600">donut_small</span> Appointment Status
-              </h3>
-              <div className="bg-white rounded-2xl p-6" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05)' }}>
-                <div className="flex items-center justify-center relative h-48">
-                  <svg className="w-40 h-40 -rotate-90" viewBox="0 0 128 128">
-                    <circle cx="64" cy="64" r="54" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
-                    <circle cx="64" cy="64" r="54" fill="transparent" stroke="#0d9488" strokeWidth="12"
-                      strokeDasharray={`${circumference * 0.7} ${circumference}`} strokeDashoffset="0" strokeLinecap="round" />
-                    <circle cx="64" cy="64" r="54" fill="transparent" stroke="#2dd4bf" strokeWidth="12"
-                      strokeDasharray={`${circumference * 0.2} ${circumference}`} strokeDashoffset={`-${circumference * 0.7}`} strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-gray-800">80</span>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Total</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-6 border-t border-gray-50 pt-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-teal-600"></div>
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase">Confirmed</p>
-                      <p className="text-sm font-bold text-gray-800">56 (70%)</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-teal-300"></div>
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase">Pending</p>
-                      <p className="text-sm font-bold text-gray-800">16 (20%)</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
                 <span className="material-symbols-outlined text-teal-600">history</span> Activity
               </h3>
                 <div className="bg-white rounded-2xl p-5 sm:p-6" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05)' }}>
@@ -610,8 +570,193 @@ export default function MedicalDashboard() {
                 </div>
             </div>
           </div>
+            </>
+          ) : activeNav === 'Notifications' ? (
+            <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm min-h-[50vh]">
+              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-4xl text-gray-300">notifications_off</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-700">No Notifications</h3>
+              <p className="text-gray-400 mt-2 text-sm max-w-sm text-center">You're all caught up! Check back later for new alerts and updates.</p>
+            </div>
+          ) : activeNav === 'Settings' ? (
+            <div className="max-w-4xl mx-auto space-y-6 w-full animate-in fade-in duration-300">
+              <h2 className="text-2xl font-bold text-gray-800">Settings</h2>
+              
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 sm:p-8 border-b border-gray-100 bg-white">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-teal-600">person</span> Profile Information
+                    </h3>
+                    <button onClick={() => setIsEditProfileOpen(true)} className="text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-4 py-2 rounded-xl transition-colors flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px]">edit</span> Edit Profile
+                    </button>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-8 items-start">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-teal-50 bg-teal-600 flex items-center justify-center text-white text-4xl font-bold overflow-hidden shadow-sm">
+                        {profile?.avatar_url ? (
+                          <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          displayName.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <button onClick={() => setIsEditProfileOpen(true)} className="text-xs font-semibold text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-4 py-2 rounded-full transition-colors uppercase tracking-wide">
+                        Change Picture
+                      </button>
+                    </div>
+
+                    <div className="flex-1 space-y-5 w-full">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Full Name</label>
+                          <p className="text-sm font-medium text-gray-900 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">{profile?.full_name || 'Medical Center'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Email Address</label>
+                          <p className="text-sm font-medium text-gray-900 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 truncate">{profile?.email || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Phone Number</label>
+                          <p className="text-sm font-medium text-gray-900 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">{profile?.phone || 'Not provided'}</p>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Bio / Description</label>
+                        <p className="text-sm font-medium text-gray-900 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 min-h-[100px]">
+                          {profile?.bio || 'No description provided.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 sm:p-8 bg-gray-50/50 flex flex-col sm:flex-row items-center gap-4 justify-between border-t border-gray-100">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800">Account Actions</h4>
+                    <p className="text-xs text-gray-500 mt-1">Manage your account security and session.</p>
+                  </div>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">lock</span> Change Password
+                    </button>
+                    <button onClick={handleSignOut} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm">
+                      <span className="material-symbols-outlined text-[18px]">logout</span> Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : activeNav === 'Patients' ? (() => {
+              const patientsMap = {};
+              appointments.forEach(apt => {
+                  const pid = apt.patient_id || apt.patient_name;
+                  if (!pid) return;
+                  if (!patientsMap[pid]) {
+                      patientsMap[pid] = {
+                          id: pid,
+                          name: apt.patient_name || 'Unknown Patient',
+                          visits: 0,
+                          lastVisit: apt.date,
+                          totalSpent: 0,
+                          recentDoctor: apt.doctor_name
+                      };
+                  }
+                  patientsMap[pid].visits += 1;
+                  patientsMap[pid].totalSpent += (apt.fee || 0);
+                  if (new Date(apt.date) > new Date(patientsMap[pid].lastVisit)) {
+                      patientsMap[pid].lastVisit = apt.date;
+                      patientsMap[pid].recentDoctor = apt.doctor_name;
+                  }
+              });
+              const patientsList = Object.values(patientsMap).sort((a,b) => new Date(b.lastVisit) - new Date(a.lastVisit));
+
+              return (
+                <div className="space-y-6 animate-in fade-in duration-300 w-full mx-auto">
+                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                     <div>
+                       <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-teal-600">group</span> Patient Directory
+                       </h2>
+                       <p className="text-gray-500 text-sm mt-1">View and manage patients who have visited this medical center.</p>
+                     </div>
+                     <div className="bg-teal-50 px-5 py-3 rounded-xl border border-teal-100 flex flex-col items-center sm:items-end w-full sm:w-auto">
+                       <span className="text-xs font-bold text-teal-600 uppercase tracking-wide">Total Visitors</span>
+                       <span className="text-2xl font-black text-teal-800">{patientsList.length}</span>
+                     </div>
+                   </div>
+
+                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[600px]">
+                           <thead>
+                             <tr className="bg-gray-50 border-b border-gray-100 text-sm">
+                               <th className="py-4 px-6 font-semibold text-gray-600">Patient Details</th>
+                               <th className="py-4 px-6 font-semibold text-gray-600">Total Visits</th>
+                               <th className="py-4 px-6 font-semibold text-gray-600">Last Encounter</th>
+                               <th className="py-4 px-6 font-semibold text-gray-600 text-right">Revenue</th>
+                             </tr>
+                           </thead>
+                           <tbody className="divide-y divide-gray-50">
+                             {patientsList.length > 0 ? patientsList.map((p, idx) => (
+                               <tr key={idx} className="hover:bg-teal-50/30 transition-colors">
+                                 <td className="py-4 px-6">
+                                   <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                                         {p.name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-gray-900">{p.name}</div>
+                                        <div className="text-xs text-gray-500">ID: {p.id?.substring?.(0,8) || 'N/A'}</div>
+                                      </div>
+                                   </div>
+                                 </td>
+                                 <td className="py-4 px-6">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200">
+                                       <span className="material-symbols-outlined text-[14px]">calendar_month</span> {p.visits} {p.visits === 1 ? 'Visit' : 'Visits'}
+                                    </span>
+                                 </td>
+                                 <td className="py-4 px-6">
+                                    <div className="text-sm font-medium text-gray-800">{new Date(p.lastVisit).toLocaleDateString()}</div>
+                                    <div className="text-[11px] text-gray-500 mt-0.5 max-w-[120px] truncate">Dr. {p.recentDoctor || 'Unknown'}</div>
+                                 </td>
+                                 <td className="py-4 px-6 text-right">
+                                    <span className="text-sm font-bold text-gray-900">₹{p.totalSpent.toLocaleString()}</span>
+                                 </td>
+                               </tr>
+                             )) : (
+                               <tr>
+                                  <td colSpan="4" className="py-12 text-center text-gray-500 text-sm">
+                                     <div className="flex flex-col items-center gap-2">
+                                       <span className="material-symbols-outlined text-4xl text-gray-300">group_off</span>
+                                       <p>No patients have visited yet.</p>
+                                     </div>
+                                  </td>
+                               </tr>
+                             )}
+                           </tbody>
+                        </table>
+                      </div>
+                   </div>
+                </div>
+              );
+          })() : (
+            <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm min-h-[50vh]">
+               <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mb-4">
+                 <span className="material-symbols-outlined text-4xl text-teal-300">construction</span>
+               </div>
+               <h3 className="text-xl font-bold text-gray-700">{activeNav}</h3>
+               <p className="text-gray-400 mt-2 text-sm max-w-sm text-center">This section is currently under development. Please check back later.</p>
+            </div>
+          )}
         </div>
       </main>
+      {/* Edit Profile Modal */}
+      <EditProfileModal isOpen={isEditProfileOpen} onClose={() => setIsEditProfileOpen(false)} profile={profile} />
+
       {/* Link Doctor Modal */}
       {isAddOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
