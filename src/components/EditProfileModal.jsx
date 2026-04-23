@@ -85,7 +85,7 @@ export default function EditProfileModal({ isOpen, onClose, profile }) {
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
+
             canvas.toBlob((blob) => {
                 if (blob) {
                     const file = new File([blob], "camera-capture.png", { type: "image/png" });
@@ -101,8 +101,8 @@ export default function EditProfileModal({ isOpen, onClose, profile }) {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 2 * 1024 * 1024) {
-               setError("Image must be less than 2MB");
-               return;
+                setError("Image must be less than 2MB");
+                return;
             }
             setAvatarFile(file);
             setAvatarPreview(URL.createObjectURL(file));
@@ -135,13 +135,13 @@ export default function EditProfileModal({ isOpen, onClose, profile }) {
             // Update public.profiles
             const { error: dbErr } = await supabase
                 .from('profiles')
-                .update({ 
-                    full_name: fullName, 
-                    phone: phone, 
-                    email: email, 
-                    bio: bio, 
+                .update({
+                    full_name: fullName,
+                    phone: phone,
+                    email: email,
+                    bio: bio,
                     avatar_url: avatarUrl,
-                    updated_at: new Date().toISOString() 
+                    updated_at: new Date().toISOString()
                 })
                 .eq('id', profile.id);
 
@@ -218,7 +218,7 @@ export default function EditProfileModal({ isOpen, onClose, profile }) {
                                     </motion.div>
                                 ) : (
                                     <form onSubmit={handleSubmit} className="space-y-5">
-                                        
+
                                         {/* Profile Picture Upload */}
                                         <div className="flex flex-col items-center gap-3">
                                             {isCameraOpen ? (
@@ -236,18 +236,18 @@ export default function EditProfileModal({ isOpen, onClose, profile }) {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div className="w-24 h-24 rounded-full border-4 border-slate-50 shadow-sm bg-slate-100 flex items-center justify-center overflow-hidden relative">
+                                                    <div className="w-24 h-24 rounded-2xl aspect-square border-4 border-slate-50 shadow-sm bg-slate-100 flex items-center justify-center overflow-hidden relative">
                                                         {avatarPreview ? (
                                                             <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
                                                         ) : (
                                                             <User size={32} className="text-slate-300" />
                                                         )}
                                                     </div>
-                                                    
+
                                                     <div className="flex gap-2">
                                                         {/* Hidden inputs */}
                                                         <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-                                                        
+
                                                         <button type="button" onClick={openCamera} className="text-xs flex items-center gap-1.5 font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full transition-colors">
                                                             <Camera size={14} /> Camera
                                                         </button>
