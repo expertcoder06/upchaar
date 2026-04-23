@@ -6,7 +6,7 @@ import {
   ChevronRight, Phone, Stethoscope, CheckCircle,
   Clock3, XCircle, FileText
 } from 'lucide-react';
-import { format, addDays, startOfToday, parseISO } from 'date-fns';
+import { format, addDays, startOfToday } from 'date-fns';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
@@ -81,7 +81,7 @@ export default function DoctorAppointmentsModal({
     };
 
     fetchSlots();
-  }, [isOpen, doctor?.id, orgId, selectedDate]);
+  }, [isOpen, doctor, orgId, selectedDate]);
 
   // Use effect to fetch appointments when slot changes
   useEffect(() => {

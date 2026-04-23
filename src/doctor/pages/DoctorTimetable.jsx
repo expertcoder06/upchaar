@@ -273,7 +273,7 @@ function ClinicCard({ org, doctorId, showToast }) {
                                 <div className="text-center py-6 text-slate-400">
                                     <CalendarDays size={28} className="mx-auto mb-2 text-slate-300" />
                                     <p className="text-sm">No time slots set for this clinic.</p>
-                                    <p className="text-xs mt-1">Click "Add Slot" to create your first schedule.</p>
+                                    <p className="text-xs mt-1">Click &quot;Add Slot&quot; to create your first schedule.</p>
                                 </div>
                             ) : (
                                 <AnimatePresence>

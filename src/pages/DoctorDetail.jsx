@@ -333,7 +333,7 @@ export default function DoctorDetailPage() {
                 .insert(appointmentPayload);
 
             if (insertErr?.message?.includes("Could not find the 'clinic_name' column")) {
-                const { clinic_name, ...fallbackPayload } = appointmentPayload;
+                const { clinic_name: _unused, ...fallbackPayload } = appointmentPayload;
                 ({ error: insertErr } = await supabase
                     .from('appointments')
                     .insert(fallbackPayload));

@@ -380,7 +380,7 @@ export default function DoctorProfile() {
                             className={inputCls}
                         />
                         <p className="text-[10px] text-slate-400 mt-1.5 ml-1">
-                            For clinic-specific timetables, use the "Add Timetable" option from the sidebar.
+                            For clinic-specific timetables, use the &quot;Add Timetable&quot; option from the sidebar.
                         </p>
                     </Field>
                 </Section>

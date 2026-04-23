@@ -41,9 +41,6 @@ function formatDate(dateStr) {
 function isToday(dateStr) {
     return dateStr === new Date().toISOString().split('T')[0];
 }
-function isFuture(dateStr) {
-    return dateStr >= new Date().toISOString().split('T')[0];
-}
 
 const AppointmentBannerCard = React.memo(function AppointmentBannerCard({ appt, index }) {
     return (
@@ -198,7 +195,7 @@ const AppointmentsBanner = React.memo(function AppointmentsBanner({ patientId })
 
 /* ── Main Dashboard ─────────────────────────────── */
 export default function PatientDashboard() {
-    const { patient, loading, signOut, updateProfile } = usePatient();
+    const { patient, loading, updateProfile } = usePatient();
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);

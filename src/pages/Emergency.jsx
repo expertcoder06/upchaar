@@ -37,7 +37,7 @@ export default function EmergencyPage() {
                         </p>
                         <div className="p-4 bg-slate-900 rounded-xl text-left mb-8 font-mono text-sm">
                             <p className="text-slate-400 mb-1">Add to .env file:</p>
-                            <code className="text-teal-400 break-all">VITE_GOOGLE_MAPS_API_KEY="YOUR_KEY"</code>
+                            <code className="text-teal-400 break-all">VITE_GOOGLE_MAPS_API_KEY=&quot;YOUR_KEY&quot;</code>
                         </div>
                         <Link to="/" className="inline-flex items-center justify-center w-full px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
                             Return to Homepage

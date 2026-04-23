@@ -1,0 +1,37 @@
+import { useState, useEffect } from 'react';
+import {
+    MapPin,
+    Search,
+    Star,
+    Filter,
+    CheckCircle,
+    ChevronRight,
+    Heart,
+    Clock,
+    Shield,
+    Loader2,
+    Calendar,
+    Sparkles
+} from 'lucide-react';
+import {
+    Card,
+    CardContent,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/auth/AuthContext.jsx';
+import { supabase } from '@/lib/supabase.js';
+import Skeleton from 'react-loading-skeleton';
+
+export default function DoctorsPage() {
+    const [allDoctors, setAllDoctors] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [location, setLocation] = useState('all');
+    const [selectedSpecialty, setSelectedSpecialty] = useState('All');
+    const [maxPrice, setMaxPrice] = useState(5000);

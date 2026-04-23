@@ -80,7 +80,7 @@ export default function DoctorPendingPage() {
                             {rejectReason && (
                                 <div className="mt-4 p-4 bg-white rounded-xl border border-red-100 text-left">
                                     <p className="text-xs font-bold text-red-600 mb-1">Message from Admin:</p>
-                                    <p className="text-sm text-slate-600 italic">"{rejectReason}"</p>
+                                    <p className="text-sm text-slate-600 italic">&quot;{rejectReason}&quot;</p>
                                 </div>
                             )}
                         </div>

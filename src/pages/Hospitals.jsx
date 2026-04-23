@@ -34,7 +34,7 @@ export default function HospitalsPage() {
                     Hospitals Integration is <span className="text-emerald-600 block sm:inline">Coming Soon!</span>
                 </h1>
                 <p className="text-lg text-slate-500 font-medium max-w-xl mx-auto">
-                    We are working hard to bring you the best network of multi-specialty hospitals. Soon you'll be able to discover, book, and coordinate care at top-rated facilities directly from our platform.
+                    We are working hard to bring you the best network of multi-specialty hospitals. Soon you&apos;ll be able to discover, book, and coordinate care at top-rated facilities directly from our platform.
                 </p>
             </motion.div>
 

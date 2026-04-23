@@ -29,7 +29,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-8">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome back!</h1>
-                <p className="text-muted-foreground">Here's a summary of your health dashboard.</p>
+                <p className="text-muted-foreground">Here&apos;s a summary of your health dashboard.</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>

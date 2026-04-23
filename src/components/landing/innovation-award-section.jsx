@@ -26,7 +26,7 @@ export const InnovationAwardSection = () => {
                 >
                     <Badge variant="destructive" className="mb-4 bg-primary/10 text-primary border-transparent hover:bg-primary/20">Top 10 Innovation</Badge>
                     <h2 className="text-3xl md:text-4xl font-bold text-foreground font-headline mb-4">
-                        Recognized as One of India's Top Innovations
+                        Recognized as One of India&apos;s Top Innovations
                     </h2>
                     <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                         Upchaar Health was honored to be selected as one of the top 10 innovations in the prestigious <strong>All India Idea & Innovation Competition</strong>, organized by the Ministry of Defence. This award celebrates our dedication to transforming healthcare accessibility through technology.

@@ -206,7 +206,7 @@ export default function MedicalDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id]);
+  }, [profile, profile?.id]);
 
   const fetchMedicals = useCallback(async () => {
     if (!profile?.id) return;
@@ -221,7 +221,7 @@ export default function MedicalDashboard() {
     } catch (err) {
       console.error('Error fetching medicals:', err.message);
     }
-  }, [profile?.id]);
+  }, [profile, profile?.id]);
 
   const handleAddDoctor = useCallback(async (e) => {
     e.preventDefault();
@@ -267,7 +267,7 @@ export default function MedicalDashboard() {
     } finally {
       setAddingDoctor(false);
     }
-  }, [doctorSecretKey, profile?.id, fetchStaff]);
+  }, [doctorSecretKey, profile, profile?.id, fetchStaff]);
 
   const handleUnlinkDoctor = useCallback(async (e, linkId) => {
     e.preventDefault();
@@ -314,7 +314,7 @@ export default function MedicalDashboard() {
     } catch (err) {
       console.error('Error fetching appointments:', err.message);
     }
-  }, [profile?.id]);
+  }, [profile, profile?.id]);
 
   useEffect(() => {
     if (profile?.id) {
@@ -558,39 +558,39 @@ export default function MedicalDashboard() {
                                 </span>
                               </button>
 
-                              {/* Schedule detail */}
-                              {isExpanded && (
-                                <div className="px-4 pb-4 space-y-1.5">
-                                  {Object.keys(byDay).length > 0 ? (
-                                    Object.entries(byDay).map(([day, times]) => (
-                                      <div key={day} className="flex items-start gap-2 text-xs">
-                                        <span className="font-semibold text-slate-600 w-9 shrink-0">{day.slice(0, 3)}</span>
-                                        <div className="flex flex-wrap gap-1">
-                                          {times.map((t, i) => (
-                                            <span key={i} className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full border border-teal-100 font-medium">
-                                              {t}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p className="text-[11px] text-gray-400 italic">Doctor hasn't set a timetable yet.</p>
-                                  )}
-                                </div>
+                          {/* Schedule detail */}
+                          {isExpanded && (
+                            <div className="px-4 pb-4 space-y-1.5">
+                              {Object.keys(byDay).length > 0 ? (
+                                Object.entries(byDay).map(([day, times]) => (
+                                  <div key={day} className="flex items-start gap-2 text-xs">
+                                    <span className="font-semibold text-slate-600 w-9 shrink-0">{day.slice(0,3)}</span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {times.map((t, i) => (
+                                        <span key={i} className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full border border-teal-100 font-medium">
+                                          {t}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-[11px] text-gray-400 italic">Doctor hasn't set a timetable yet.</p>
                               )}
                             </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="sm:col-span-2 xl:col-span-3 py-10 text-center bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
-                        <span className="material-symbols-outlined text-3xl text-gray-300 mb-2">person_add</span>
-                        <p className="text-gray-500 text-xs font-medium">Link your partner doctors</p>
-                        <button onClick={() => setIsAddOpen(true)} className="mt-2 text-teal-600 text-xs font-bold hover:underline">Get Started</button>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    );
+                  })
+                ) : (
+                  <div className="sm:col-span-2 xl:col-span-3 py-10 text-center bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
+                    <span className="material-symbols-outlined text-3xl text-gray-300 mb-2">person_add</span>
+                    <p className="text-gray-500 text-xs font-medium">Link your partner doctors</p>
+                    <button onClick={() => setIsAddOpen(true)} className="mt-2 text-teal-600 text-xs font-bold hover:underline">Get Started</button>
                   </div>
+                )}
+              </div>
 
                   <div>
                     <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 mb-4">
@@ -663,7 +663,7 @@ export default function MedicalDashboard() {
                 <span className="material-symbols-outlined text-4xl text-gray-300">notifications_off</span>
               </div>
               <h3 className="text-xl font-bold text-gray-700">No Notifications</h3>
-              <p className="text-gray-400 mt-2 text-sm max-w-sm text-center">You're all caught up! Check back later for new alerts and updates.</p>
+              <p className="text-gray-400 mt-2 text-sm max-w-sm text-center">You&apos;re all caught up! Check back later for new alerts and updates.</p>
             </div>
           ) : activeNav === 'Settings' ? (
             <div className="max-w-4xl mx-auto space-y-6 w-full animate-in fade-in duration-300">
@@ -1010,7 +1010,7 @@ export default function MedicalDashboard() {
             </div>
             <form onSubmit={handleAddDoctor} className="p-6 sm:p-8 space-y-6">
               <div>
-                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Doctor's Secret Key *</label>
+                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Doctor&apos;s Secret Key *</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">key</span>
                   <input
