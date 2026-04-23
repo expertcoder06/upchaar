@@ -260,7 +260,7 @@ export default function Blogs() {
                 {/* Search result info */}
                 {search && !postsLoading && (
                     <p className="text-sm text-slate-500">
-                        {filtered.length} result{filtered.length !== 1 ? 's' : ''} for "<span className="font-medium text-slate-700">{search}</span>"
+                        {filtered.length} result{filtered.length !== 1 ? 's' : ''} for &quot;<span className="font-medium text-slate-700">{search}</span>&quot;
                     </p>
                 )}
 

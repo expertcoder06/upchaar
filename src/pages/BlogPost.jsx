@@ -24,7 +24,7 @@ export default function BlogPost() {
 
     useEffect(() => {
         if (post) { incrementViews(post.id); window.scrollTo(0, 0); }
-    }, [slug]);
+    }, [slug, post, incrementViews]);
 
     const handleLike = () => {
         if (!liked && post) { likePost(post.id); setLiked(true); }

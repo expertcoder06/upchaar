@@ -83,7 +83,7 @@ export default function AdminDashboard() {
                 <h1 className="text-2xl font-bold text-slate-800">
                     {greeting}
                 </h1>
-                <p className="text-sm text-slate-500 mt-1">Here's what's happening on Upchaar Health today.</p>
+                <p className="text-sm text-slate-500 mt-1">Here&apos;s what&apos;s happening on Upchaar Health today.</p>
             </div>
 
             {/* Stat Cards */}

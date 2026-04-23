@@ -50,7 +50,7 @@ export default function DiagnosticsPage() {
                         Precision Diagnostics <br />
                         <span className="text-emerald-400 text-3xl md:text-4xl">At Your Doorstep</span>
                     </h1>
-                    <p className="text-slate-400 text-lg mb-8 font-medium">Compare prices, book home collection, and receive digital reports from India's top-rated NABL labs.</p>
+                    <p className="text-slate-400 text-lg mb-8 font-medium">Compare prices, book home collection, and receive digital reports from India&apos;s top-rated NABL labs.</p>
                     
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="relative flex-1 group">

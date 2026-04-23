@@ -47,7 +47,7 @@ export default function PatientRegister() {
     // ── OTP step: 'form' | 'otp' ──────────────────
     const [step, setStep]             = useState('form');
     const [otp, setOtp]               = useState(['','','','','','']);
-    const [otpPhone, setOtpPhone]     = useState('');
+    const [otpPhone]                  = useState('');
     const [otpError, setOtpError]     = useState('');
     const [otpLoading, setOtpLoading] = useState(false);
     const [resendCooldown, setResendCooldown] = useState(0);

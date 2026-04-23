@@ -134,7 +134,7 @@ export default function TermsPage() {
                             <h3>3. How We Share Your Information</h3>
                             <p>We restrict access to your personal data. Information is only shared under the following circumstances:</p>
                             <ul>
-                                <li><strong>Between Patient and Doctor:</strong> A patient's health data and medical records are shared exclusively with the specific doctor they have booked for a consultation.</li>
+                                <li><strong>Between Patient and Doctor:</strong> A patient&apos;s health data and medical records are shared exclusively with the specific doctor they have booked for a consultation.</li>
                                 <li><strong>Service Providers:</strong> We may share minimal necessary data with secure third-party infrastructure providers (e.g., cloud hosting, payment gateways, SMS gateways) who are bound by strict confidentiality agreements.</li>
                                 <li><strong>Legal Compliance:</strong> We may disclose information if required to do so by law, court order, or statutory government authorities.</li>
                             </ul>

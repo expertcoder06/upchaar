@@ -138,7 +138,7 @@ export default function MedicalDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id]);
+  }, [profile, profile?.id]);
 
   const fetchMedicals = useCallback(async () => {
     if (!profile?.id) return;
@@ -153,7 +153,7 @@ export default function MedicalDashboard() {
     } catch (err) {
       console.error('Error fetching medicals:', err.message);
     }
-  }, [profile?.id]);
+  }, [profile, profile?.id]);
 
   const handleAddDoctor = useCallback(async (e) => {
     e.preventDefault();
@@ -199,7 +199,7 @@ export default function MedicalDashboard() {
     } finally {
       setAddingDoctor(false);
     }
-  }, [doctorSecretKey, profile?.id, fetchStaff]);
+  }, [doctorSecretKey, profile, profile?.id, fetchStaff]);
 
   const handleUnlinkDoctor = useCallback(async (e, linkId) => {
     e.preventDefault();
@@ -246,7 +246,7 @@ export default function MedicalDashboard() {
     } catch (err) {
       console.error('Error fetching appointments:', err.message);
     }
-  }, [profile?.id]);
+  }, [profile, profile?.id]);
 
   useEffect(() => { 
     if (profile?.id) {
@@ -504,7 +504,7 @@ export default function MedicalDashboard() {
                                   </div>
                                 ))
                               ) : (
-                                <p className="text-[11px] text-gray-400 italic">Doctor hasn't set a timetable yet.</p>
+                                <p className="text-[11px] text-gray-400 italic">Doctor hasn&apos;t set a timetable yet.</p>
                               )}
                             </div>
                           )}
@@ -593,7 +593,7 @@ export default function MedicalDashboard() {
                 <span className="material-symbols-outlined text-4xl text-gray-300">notifications_off</span>
               </div>
               <h3 className="text-xl font-bold text-gray-700">No Notifications</h3>
-              <p className="text-gray-400 mt-2 text-sm max-w-sm text-center">You're all caught up! Check back later for new alerts and updates.</p>
+              <p className="text-gray-400 mt-2 text-sm max-w-sm text-center">You&apos;re all caught up! Check back later for new alerts and updates.</p>
             </div>
           ) : activeNav === 'Settings' ? (
             <div className="max-w-4xl mx-auto space-y-6 w-full animate-in fade-in duration-300">
@@ -783,7 +783,7 @@ export default function MedicalDashboard() {
             </div>
             <form onSubmit={handleAddDoctor} className="p-6 sm:p-8 space-y-6">
               <div>
-                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Doctor's Secret Key *</label>
+                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Doctor&apos;s Secret Key *</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">key</span>
                   <input 

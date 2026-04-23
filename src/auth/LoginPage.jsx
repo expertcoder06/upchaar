@@ -402,7 +402,7 @@ export default function LoginPage() {
                                 </button>
 
                                 <p className="text-center text-sm text-slate-500 mt-1">
-                                    Don't have an account?{' '}
+                                    Don&apos;t have an account?{' '}
                                     <button type="button" onClick={() => { setTab('signup'); setError(''); setSuccess(''); }}
                                         className="text-teal-600 font-semibold hover:underline">Sign Up</button>
                                 </p>

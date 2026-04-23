@@ -69,7 +69,7 @@ export function FaqSection() {
                         Frequently Asked Questions
                     </h2>
                     <p className="max-w-[700px] mx-auto text-slate-500 md:text-xl">
-                        Everything you need to know about navigating the platform, whether you're a patient looking for care or a doctor providing it.
+                        Everything you need to know about navigating the platform, whether you&apos;re a patient looking for care or a doctor providing it.
                     </p>
                 </div>
 

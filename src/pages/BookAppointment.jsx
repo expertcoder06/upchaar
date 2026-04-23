@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -40,7 +40,6 @@ export default function BookAppointment() {
     const [availableStates, setAvailableStates] = useState([]);
     const [availableCities, setAvailableCities] = useState([]);
     const [doctorTimetables, setDoctorTimetables] = useState([]);
-    const [availableScheduleDays, setAvailableScheduleDays] = useState([]);
     
     // ── UI Flow State ────────────────────────────────
     const [step, setStep] = useState(1); // 1: Search, 2: Clinic/Slot, 3: Details & OTP, 4: Payment, 5: Confirmation
@@ -105,13 +104,12 @@ export default function BookAppointment() {
     }, [selectedState]);
 
     // ── Geolocation ──────────────────────────────────
-    const handleAutoDetect = () => {
+    const handleAutoDetect = useCallback(() => {
         if (detectingLocation) return;
         setDetectingLocation(true);
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    // Mock detection for demo: using Manipur/jvhuvv since it's in the DB
                     setTimeout(() => {
                         setSelectedState("Manipur");
                         setSelectedCity("jvhuvv");
@@ -127,12 +125,12 @@ export default function BookAppointment() {
         } else {
             setDetectingLocation(false);
         }
-    };
+    }, [detectingLocation]);
 
     // Auto-detect on mount
     useEffect(() => {
         handleAutoDetect();
-    }, []);
+    }, [handleAutoDetect]);
 
     // ── Fetch Doctors ────────────────────────────────
     useEffect(() => {
@@ -150,24 +148,7 @@ export default function BookAppointment() {
         fetchDoctors();
     }, [selectedState, selectedCity]);
 
-    // ── Fetch Clinics & Timetables for Selected Doctor ────────────
     // ── Handle Deep Link Doctor & Redirect ──────────────────────
-    useEffect(() => {
-        const doctorId = searchParams.get('doctorId');
-        if (!doctorId) {
-            navigate('/doctors');
-            return;
-        }
-
-        if (doctors.length > 0) {
-            const doc = doctors.find(d => d.id === doctorId);
-            if (doc && !selectedDoctor) {
-                handleSelectDoctor(doc);
-            }
-        }
-    }, [searchParams, doctors, selectedDoctor, navigate]);
-
-    // ── Fetch Clinics for Selected Doctor ────────────
     const handleSelectDoctor = async (doc) => {
         setSelectedDoctor(doc);
         setLoading(true);
@@ -175,7 +156,6 @@ export default function BookAppointment() {
         setSelectedDate('');
         setSelectedSlot('');
         
-        // Fetch linked clinics via staff_links
         const { data: staffData, error: staffError } = await supabase
             .from('staff_links')
             .select('organization_id, organization_type')
@@ -200,7 +180,6 @@ export default function BookAppointment() {
             setClinics([]);
         }
 
-        // Fetch doctor timetables for all linked orgs
         const { data: ttData, error: ttError } = await supabase
             .from('doctor_timetables')
             .select('*')
@@ -215,18 +194,29 @@ export default function BookAppointment() {
         setStep(2);
     };
 
+    useEffect(() => {
+        const doctorId = searchParams.get('doctorId');
+        if (!doctorId) return;
+
+        if (doctors.length > 0) {
+            const doc = doctors.find(d => d.id === doctorId);
+            if (doc && !selectedDoctor) {
+                handleSelectDoctor(doc);
+            }
+        }
+    }, [searchParams, doctors, selectedDoctor]);
+
     // ── Navigation & Actions ─────────────────────────
     const handleConfirmSlots = () => {
         if (user) {
-            setStep(4); // Skip OTP for logged-in users
+            setStep(4);
         } else {
-            setStep(3); // Prompt for OTP
+            setStep(3);
         }
     };
 
     const handleVerifyOtp = () => {
         setVerifyingOtp(true);
-        // Simulate OTP verification
         setTimeout(() => {
             setOtpVerified(true);
             setVerifyingOtp(false);
@@ -237,7 +227,6 @@ export default function BookAppointment() {
     const handleConfirmBooking = async () => {
         setBookingLoading(true);
         
-        // Sync to appointments table
         const appointmentData = {
             patient_id: user?.id || null,
             patient_name: patientInfo.name,
@@ -251,7 +240,6 @@ export default function BookAppointment() {
             type: 'In-person',
             fee: selectedDoctor.fees || 500,
             specialization: selectedDoctor.specialization
-            // NO queue_number because this is Without Queue Based
         };
 
         const { error } = await supabase.from('appointments').insert([appointmentData]);
@@ -270,7 +258,6 @@ export default function BookAppointment() {
         setBookingLoading(false);
     };
 
-    // Derived: filtered doctors by search term
     const filteredDoctors = useMemo(() => {
         return doctors.filter(d => 
             d.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -278,18 +265,13 @@ export default function BookAppointment() {
         );
     }, [doctors, searchTerm]);
 
-    // Calculate slots for the currently selected date and clinic
     const availableSlots = useMemo(() => {
         if (!selectedClinic || !selectedDate) return [];
-        const dStr = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }); // e.g. "Monday"
-        
-        // Find which timetables match clinic and day
-        // Use internal org ID (medicals.id / clinics.id) to match timetable entries
+        const dStr = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
         const matchedOrgId = selectedClinic.id;
         const matched = doctorTimetables.filter(t => t.org_id === matchedOrgId && t.day === dStr);
         if (matched.length === 0) return [];
         
-        // Convert ranges like '09:00' to '12:00' into 30m slots
         const slots = [];
         matched.forEach(t => {
             let [h1, m1] = t.time_from.split(':').map(Number);
@@ -309,14 +291,10 @@ export default function BookAppointment() {
         return [...new Set(slots)];
     }, [selectedClinic, selectedDate, doctorTimetables]);
 
-    // Which days has at least one active slot in that clinic?
     const daysWithSlots = useMemo(() => {
         if (!selectedClinic) return new Set();
-        // Use internal org ID (medicals.id / clinics.id) to match timetable entries
         const matchedOrgId = selectedClinic.id;
         return new Set(doctorTimetables.filter(t => t.org_id === matchedOrgId).map(t => {
-            // Ensure the day format from timetable matches the Javascript short form (Mon, Tue)
-            // Doctor timetables has full day name e.g. "Monday". Convert to short format for tracking.
             return t.day.substring(0, 3);
         }));
     }, [selectedClinic, doctorTimetables]);
@@ -339,6 +317,7 @@ export default function BookAppointment() {
                             </Button>
                         )}
                         <div>
+
                             <h1 className="text-3xl font-bold text-slate-900 font-headline">
                                 {step === 1 ? 'Find Your Doctor' : 
                                  step === 2 ? 'Schedule Appointment' : 
@@ -700,7 +679,7 @@ export default function BookAppointment() {
                                         <div className="space-y-4 border-t pt-8">
                                             <div className="text-center">
                                                 <h3 className="font-bold text-slate-900">OTP Verification</h3>
-                                                <p className="text-sm text-slate-500">We've sent a code to your phone (Demo: 000000)</p>
+                                                <p className="text-sm text-slate-500">We&apos;ve sent a code to your phone (Demo: 000000)</p>
                                             </div>
                                             <div className="flex justify-center gap-2">
                                                 {otp.map((digit, idx) => (
@@ -727,7 +706,7 @@ export default function BookAppointment() {
                                                 onClick={handleVerifyOtp}
                                                 disabled={verifyingOtp || otp.join('').length < 6}
                                             >
-                                                {verifyingOtp ? <Loader2 className="animate-spin mr-2" /> : 'Verify & Continue'}
+                                                {verifyingOtp ? <Loader2 className="animate-spin mr-2" /> : "Verify & Continue"}
                                             </Button>
                                         </div>
                                     </CardContent>

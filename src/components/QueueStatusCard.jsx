@@ -15,6 +15,9 @@ export default function QueueStatusCard({ appointment, currentServing, onAction 
     const estimatedWait = Math.max(0, ((appointment.queue_number || 1) - currentServing) * 10); // minutes
 
     const myNumber = appointment.queue_number || 1;
+    const isServing = myNumber === currentServing;
+    const isNext = myNumber === currentServing + 1;
+    const hasPassed = myNumber < currentServing;
     const position = myNumber - currentServing;
 
     if (hasPassed) return null; // Or show "Completed" state

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -112,7 +112,7 @@ export default function BookAppointmentQueued() {
     }, [selectedState]);
 
     // ── Geolocation ──────────────────────────────────
-    const handleAutoDetect = () => {
+    const handleAutoDetect = useCallback(() => {
         if (detectingLocation) return;
         setDetectingLocation(true);
         if ("geolocation" in navigator) {
@@ -134,12 +134,12 @@ export default function BookAppointmentQueued() {
         } else {
             setDetectingLocation(false);
         }
-    };
+    }, [detectingLocation]);
 
     // Auto-detect on mount
     useEffect(() => {
         handleAutoDetect();
-    }, []);
+    }, [handleAutoDetect]);
 
     // ── Fetch Doctors ────────────────────────────────
     useEffect(() => {
@@ -707,7 +707,7 @@ export default function BookAppointmentQueued() {
                                         <div className="space-y-4 border-t pt-8">
                                             <div className="text-center">
                                                 <h3 className="font-bold text-slate-900">OTP Verification</h3>
-                                                <p className="text-sm text-slate-500">We've sent a code to your phone (Demo: 000000)</p>
+                                                <p className="text-sm text-slate-500">We&apos;ve sent a code to your phone (Demo: 000000)</p>
                                             </div>
                                             <div className="flex justify-center gap-2">
                                                 {otp.map((digit, idx) => (
