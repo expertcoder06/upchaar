@@ -180,29 +180,31 @@ export default function DoctorDashboard() {
                 // 2. Fetch linked organizations
                 const { data: staffLinks, error: staffError } = await supabase
                     .from('staff_links')
-                    .select('*, organization:organization_id(id, full_name, clinics(*), medicals(*))')
+                    .select('organization_id, organization_type')
                     .eq('doctor_id', doctorRecord.id);
 
                 if (staffError) throw staffError;
 
-                const orgs = (staffLinks || []).map(link => {
-                    const profile = link.organization;
-                    if (!profile) return null;
-
-                    // A profile can have one clinic or one medical store
-                    const orgDetails = (profile.clinics && profile.clinics[0]) || (profile.medicals && profile.medicals[0]);
+                const orgPromises = (staffLinks || []).map(async (link) => {
+                    const table = link.organization_type === 'medical' ? 'medicals' : 'clinics';
+                    const { data } = await supabase
+                        .from(table)
+                        .select('id, name, address, city, state')
+                        .eq('profile_id', link.organization_id)
+                        .maybeSingle();
                     
-                    if (!orgDetails) return null;
+                    if (!data) return null;
 
                     return {
-                        ...orgDetails,
-                        id: orgDetails.id, // Entry ID for timetables
-                        profile_id: profile.id, // Profile ID for appointments
+                        ...data,
+                        id: data.id, // Entry ID for timetables
+                        profile_id: link.organization_id, // Profile ID for appointments
                         type: link.organization_type,
-                        displayName: orgDetails.name || profile.full_name
+                        displayName: data.name
                     };
-                }).filter(Boolean);
+                });
 
+                const orgs = (await Promise.all(orgPromises)).filter(Boolean);
                 setLinkedOrgs(orgs);
 
             } catch (error) {
@@ -228,26 +230,24 @@ export default function DoctorDashboard() {
         { label: 'Total Revenue', value: `Rs. ${(doctorRecord?.total_revenue || doctor?.totalRevenue || 0).toLocaleString()}`, icon: IndianRupee, tone: 'text-amber-600 bg-amber-50' },
     ], [linkedOrgs.length, todayAppointments, doctorRecord?.total_revenue, doctor?.totalRevenue]);
 
-    const clinicCards = useMemo(() => {
-        if (!clinics.length) return [];
+    const orgCards = useMemo(() => {
+        if (!linkedOrgs.length) return [];
 
-        return clinics.map(clinicName => {
+        return linkedOrgs.map(org => {
             const relatedAppointments = appointments.filter(apt => {
-                if (!apt.clinic_name) return clinics.length === 1;
-                return apt.clinic_name === clinicName || String(apt.clinic_name).includes(clinicName);
+                // Support both legacy organization_id format and new format
+                return apt.organization_id === org.id || apt.organization_id === org.profile_id;
             });
 
             return {
-                clinicName,
+                ...org,
                 totalPatients: relatedAppointments.length,
                 todayPatients: relatedAppointments.filter(apt => String(apt.date || '').slice(0, 10) === today).length,
                 upcoming: relatedAppointments.find(apt => String(apt.date || '').slice(0, 10) >= today) || null,
                 appointments: relatedAppointments,
             };
         });
-    }, [appointments, clinics, today]);
-
-    const [selectedClinic, setSelectedClinic] = useState(null);
+    }, [appointments, linkedOrgs, today]);
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-8">
@@ -318,21 +318,21 @@ export default function DoctorDashboard() {
                         <Skeleton height={180} borderRadius={24} />
                         <Skeleton height={180} borderRadius={24} />
                     </div>
-                ) : clinicCards.length === 0 ? (
+                ) : orgCards.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center">
                         <Building2 size={28} className="mx-auto text-slate-300 mb-3" />
-                        <p className="text-sm font-medium text-slate-500">No clinic added yet.</p>
-                        <p className="text-xs text-slate-400 mt-1">Add your clinic name and timing from the profile page.</p>
+                        <p className="text-sm font-medium text-slate-500">No linked clinics or medical centers.</p>
+                        <p className="text-xs text-slate-400 mt-1">Provide your Secret Key to an admin to get linked.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {clinicCards.map((clinic, index) => (
+                        {orgCards.map((org, index) => (
                             <motion.button
-                                key={clinic.clinicName}
+                                key={org.id || org.profile_id}
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.06 }}
-                                onClick={() => setSelectedClinic(clinic)}
+                                onClick={() => setSelectedOrgForAppointments(org)}
                                 className="text-left rounded-3xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-teal-300 hover:shadow-md transition-all p-5"
                             >
                                 <div className="flex items-center justify-between mb-4">
@@ -341,18 +341,18 @@ export default function DoctorDashboard() {
                                     </div>
                                     <ChevronRight size={18} className="text-slate-400" />
                                 </div>
-                                <h3 className="font-semibold text-slate-800 text-base">{clinic.clinicName}</h3>
+                                <h3 className="font-semibold text-slate-800 text-base">{org.displayName}</h3>
                                 <div className="flex flex-wrap gap-2 mt-4">
                                     <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-medium text-slate-600">
-                                        {clinic.totalPatients} total patients
+                                        {org.totalPatients} total patients
                                     </span>
                                     <span className="px-2.5 py-1 rounded-full bg-teal-50 border border-teal-100 text-xs font-medium text-teal-700">
-                                        {clinic.todayPatients} today
+                                        {org.todayPatients} today
                                     </span>
                                 </div>
-                                {clinic.upcoming && (
+                                {org.upcoming && (
                                     <p className="mt-4 text-xs text-slate-500">
-                                        Next booking: {clinic.upcoming.patient_name || clinic.upcoming.patient || 'Patient'} on {formatDate(clinic.upcoming.date)} at {clinic.upcoming.time_slot || '-'}
+                                        Next booking: {org.upcoming.patient_name || org.upcoming.patient || 'Patient'} on {formatDate(org.upcoming.date)} at {org.upcoming.time_slot || '-'}
                                     </p>
                                 )}
                             </motion.button>

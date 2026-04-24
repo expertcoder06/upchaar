@@ -320,10 +320,11 @@ function DoctorCard({ doctor }) {
     const initials = (doctor.name || '').replace(/Dr\.\s?/, '').charAt(0).toUpperCase();
 
     const handleSelectDoctor = () => {
-        if (!authLoading && user) {
-            navigate(`/book-appointment-queued?doctorId=${doctor.id}`);
+        const route = `/book-appointment-queued?doctorId=${doctor.id}`;
+        if (!authLoading && !user) {
+            navigate('/login', { state: { from: route } });
         } else {
-            navigate(`/appointment-options?doctorId=${doctor.id}`);
+            navigate(route);
         }
     };
 

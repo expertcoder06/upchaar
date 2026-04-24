@@ -8,6 +8,7 @@ export default function DiagnosticDashboard() {
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
+        if (!window.confirm('Are you sure you want to sign out?')) return;
         await signOut();
         navigate('/');
     };

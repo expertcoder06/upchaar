@@ -86,6 +86,7 @@ export const Header = () => {
     }, [isSearchOpen, isMobile]);
 
     const handleSignOut = async () => {
+        if (!window.confirm('Are you sure you want to sign out?')) return;
         setIsProfileOpen(false);
         setIsMenuOpen(false);
         // Sign out from both AuthContext (Supabase session) and PatientContext (local state)

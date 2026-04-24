@@ -257,7 +257,11 @@ export default function ClinicDashboard() {
     }
   }, [profile?.id, fetchStaff, fetchClinics, fetchAppointments]);
 
-  const handleSignOut = useCallback(async () => { await signOut(); navigate('/login'); }, [signOut, navigate]);
+  const handleSignOut = useCallback(async () => {
+    if (!window.confirm('Are you sure you want to sign out?')) return;
+    await signOut();
+    navigate('/login');
+  }, [signOut, navigate]);
   const handleNavClick = useCallback((label) => {
     setActiveNav(label);
     if (window.innerWidth < 1024) setSidebarOpen(false);

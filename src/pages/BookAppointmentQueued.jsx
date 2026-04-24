@@ -136,10 +136,8 @@ export default function BookAppointmentQueued() {
         }
     }, [detectingLocation]);
 
-    // Auto-detect on mount
-    useEffect(() => {
-        handleAutoDetect();
-    }, [handleAutoDetect]);
+    // Auto-detect only if user is on step 1 (browsing, no doctorId in URL)
+    // Removed auto-detect on mount since most users arrive via a doctorId link
 
     // ── Fetch Doctors ────────────────────────────────
     useEffect(() => {
@@ -157,22 +155,36 @@ export default function BookAppointmentQueued() {
         fetchDoctors();
     }, [selectedState, selectedCity]);
 
-    // ── Fetch Clinics & Timetables for Selected Doctor ────────────
-    // ── Handle Deep Link Doctor & Redirect ──────────────────────
+    // ── Handle Deep Link Doctor ──────────────────────────────────────
     useEffect(() => {
         const doctorId = searchParams.get('doctorId');
         if (!doctorId) {
-            navigate('/doctors');
+            // No doctor ID in URL — stay on step 1 for searching
             return;
         }
 
-        if (doctors.length > 0) {
-            const doc = doctors.find(d => d.id === doctorId);
-            if (doc && !selectedDoctor) {
-                handleSelectDoctor(doc);
+        // Fetch this doctor directly by ID, regardless of the filter state
+        const fetchAndSelectDoctor = async () => {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('doctors')
+                .select('*')
+                .eq('id', doctorId)
+                .maybeSingle();
+
+            if (error || !data) {
+                console.error('Doctor not found:', error);
+                setLoading(false);
+                navigate('/doctors');
+                return;
             }
-        }
-    }, [searchParams, doctors, selectedDoctor, navigate]);
+
+            await handleSelectDoctor(data);
+        };
+
+        fetchAndSelectDoctor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
 
     // ── Fetch Clinics for Selected Doctor ────────────
     const handleSelectDoctor = async (doc) => {
@@ -244,37 +256,54 @@ export default function BookAppointmentQueued() {
     const handleConfirmBooking = async () => {
         setBookingLoading(true);
         
-        // Sync to appointments table
-        const appointmentData = {
-            patient_id: user?.id || null,
-            patient_name: patientInfo.name,
-            doctor_id: selectedDoctor.id,
-            doctor_name: selectedDoctor.full_name,
-            organization_id: selectedClinic?.id,
-            organization_type: selectedClinic?.organization_type || 'clinic',
-            date: selectedDate,
-            time_slot: selectedSlot,
-            status: 'Confirmed',
-            type: 'In-person',
-            fee: selectedDoctor.fees || 500,
-            queue_number: Math.floor(Math.random() * 20) + 1, // Mock queue number
-            specialization: selectedDoctor.specialization
-        };
+        try {
+            // Calculate real queue number: count existing appointments for same doctor + org + date + slot
+            const { count, error: countError } = await supabase
+                .from('appointments')
+                .select('id', { count: 'exact', head: true })
+                .eq('doctor_id', selectedDoctor.id)
+                .eq('organization_id', selectedClinic?.id)
+                .eq('date', selectedDate)
+                .eq('time_slot', selectedSlot);
 
-        const { error } = await supabase.from('appointments').insert([appointmentData]);
+            const realQueueNumber = countError ? 1 : (count ?? 0) + 1;
+
+            // Sync to appointments table
+            const appointmentData = {
+                patient_id: user?.id || null,
+                patient_name: patientInfo.name,
+                doctor_id: selectedDoctor.id,
+                doctor_name: selectedDoctor.full_name,
+                organization_id: selectedClinic?.id,
+                organization_type: selectedClinic?.organization_type || 'clinic',
+                date: selectedDate,
+                time_slot: selectedSlot,
+                status: 'Confirmed',
+                type: 'In-person',
+                fee: selectedDoctor.fees || 500,
+                queue_number: realQueueNumber,
+                specialization: selectedDoctor.specialization
+            };
+
+            const { error } = await supabase.from('appointments').insert([appointmentData]);
         
-        if (!error) {
-            setBookingSuccess(true);
-            toast.success('Congratulations / Appointment Confirmed message', {
-                description: `Your appointment with ${selectedDoctor.full_name} is set for ${new Date(selectedDate).toDateString()}.`,
-                duration: 5000,
-            });
-            setStep(5);
-        } else {
-            console.error("Booking error:", error);
-            toast.error("Error booking appointment. Please try again.");
+            if (!error) {
+                setBookingSuccess(true);
+                toast.success('Appointment Confirmed!', {
+                    description: `Your appointment with ${selectedDoctor.full_name} is set for ${new Date(selectedDate).toDateString()}. Queue #${realQueueNumber}`,
+                    duration: 5000,
+                });
+                setStep(5);
+            } else {
+                console.error("Booking error:", error);
+                toast.error("Error booking appointment. Please try again.");
+            }
+        } catch (err) {
+            console.error("Unexpected error:", err);
+            toast.error("Something went wrong. Please try again.");
+        } finally {
+            setBookingLoading(false);
         }
-        setBookingLoading(false);
     };
 
     // Derived: filtered doctors by search term

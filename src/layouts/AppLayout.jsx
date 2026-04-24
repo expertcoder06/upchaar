@@ -34,6 +34,7 @@ export default function AppLayout({ children, hideSidebar = false, hideNavbar = 
     const [editProfileOpen, setEditProfileOpen] = useState(false);
 
     const handleSignOut = useCallback(async () => {
+        if (!window.confirm('Are you sure you want to sign out?')) return;
         await signOut();
         navigate('/');
     }, [signOut, navigate]);

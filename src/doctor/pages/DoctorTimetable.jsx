@@ -31,7 +31,7 @@ const DAY_COLORS = {
     Sunday:    'bg-slate-50 text-slate-600 border-slate-200',
 };
 
-const EMPTY_SLOT = { day: 'Monday', time_from: '09:00', time_to: '13:00', notes: '' };
+const EMPTY_SLOT = { day: 'Monday', time_from: '09:00', time_to: '13:00', notes: '', is_active: true };
 
 /* ── Toast ───────────────────────────────────────────── */
 function Toast({ toast }) {
@@ -189,13 +189,17 @@ function ClinicCard({ org, doctorId, showToast }) {
         setSaving(true);
         try {
             const toUpsert = slots.map((item) => {
-                const { _isNew, _localId, ...s } = item;
                 return {
-                    ...s,
+                    id: item.id,
                     doctor_id: doctorId,
                     org_id: org.id,
                     org_type: org.type,
                     org_name: org.name,
+                    day: item.day,
+                    time_from: item.time_from,
+                    time_to: item.time_to,
+                    notes: item.notes || '',
+                    is_active: item.is_active === false ? false : true
                 };
             });
 
