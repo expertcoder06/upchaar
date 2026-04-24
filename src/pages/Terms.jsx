@@ -1,10 +1,13 @@
 import React from 'react';
 import { ShieldCheck, Mail, Phone, MessageSquare } from 'lucide-react';
 import AppLayout from '../layouts/AppLayout';
+import { useAuth } from '@/auth/AuthContext.jsx';
 
 export default function TermsPage() {
+    const { user } = useAuth();
+
     return (
-        <AppLayout>
+        <AppLayout hideSidebar={!user} hideNavbar={!user}>
             <div className="bg-slate-50 min-h-screen py-16 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-12">
