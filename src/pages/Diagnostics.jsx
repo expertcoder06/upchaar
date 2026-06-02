@@ -332,6 +332,23 @@ function BookingModal({ center, onClose }) {
     );
 }
 
+const parseTest = (t) => {
+    if (typeof t === 'object' && t !== null) {
+        return t;
+    }
+    if (typeof t === 'string') {
+        try {
+            const parsed = JSON.parse(t);
+            if (typeof parsed === 'object' && parsed !== null) {
+                return parsed;
+            }
+        } catch (e) {
+            // Not a JSON string
+        }
+    }
+    return t;
+};
+
 // ── Main Page ─────────────────────────────────────────────────────
 export default function DiagnosticsPage() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -358,10 +375,10 @@ export default function DiagnosticsPage() {
                 const merged = (profileData || []).map(p => {
                     const dc = centerMap[p.id];
                     // Tests stored as [{id,name,price,category,status}] or plain strings
-                    const rawTests = Array.isArray(dc?.tests) ? dc.tests : [];
+                    const rawTests = (Array.isArray(dc?.tests) ? dc.tests : []).map(parseTest);
                     const activeTestNames = rawTests
-                        .filter(t => typeof t === 'object' ? t.status === 'Active' : true)
-                        .map(t => typeof t === 'object' ? t.name : t);
+                        .filter(t => typeof t === 'object' && t !== null ? t.status === 'Active' : true)
+                        .map(t => typeof t === 'object' && t !== null ? t.name : t);
                     return {
                         id: p.id,
                         name: dc?.name || p.full_name || 'Diagnostic Center',
@@ -379,10 +396,10 @@ export default function DiagnosticsPage() {
 
                 (centerData || []).forEach(dc => {
                     if (!merged.find(m => m.id === dc.profile_id)) {
-                        const rawTests = Array.isArray(dc.tests) ? dc.tests : [];
+                        const rawTests = (Array.isArray(dc.tests) ? dc.tests : []).map(parseTest);
                         const activeTestNames = rawTests
-                            .filter(t => typeof t === 'object' ? t.status === 'Active' : true)
-                            .map(t => typeof t === 'object' ? t.name : t);
+                            .filter(t => typeof t === 'object' && t !== null ? t.status === 'Active' : true)
+                            .map(t => typeof t === 'object' && t !== null ? t.name : t);
                         merged.push({
                             id: dc.id,
                             name: dc.name || 'Diagnostic Center',
@@ -591,16 +608,20 @@ export default function DiagnosticsPage() {
                                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Tests</p>
                                             {center.tests.length > 0 ? (
                                                 <div className="flex flex-wrap gap-2">
-                                                    {center.tests.map(test => (
-                                                        <Badge
-                                                            key={test}
-                                                            variant="secondary"
-                                                            onClick={() => setBookingCenter(center)}
-                                                            className="bg-slate-50 text-slate-600 border-slate-100 hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer"
-                                                        >
-                                                            {test}
-                                                        </Badge>
-                                                    ))}
+                                                    {center.tests.map(test => {
+                                                        const raw = (center.rawTests || []).find(r => r.name === test);
+                                                        return (
+                                                            <Badge
+                                                                key={test}
+                                                                variant="secondary"
+                                                                onClick={() => setBookingCenter(center)}
+                                                                className="bg-slate-50 text-slate-600 border-slate-100 hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer flex items-center gap-1 font-semibold"
+                                                            >
+                                                                <span>{test}</span>
+                                                                {raw?.price && <span className="text-emerald-600 font-bold">({raw.price})</span>}
+                                                            </Badge>
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : (
                                                 <p className="text-sm text-slate-400 italic">No tests listed yet.</p>
