@@ -12,8 +12,10 @@ import { toast, Toaster } from 'sonner';
 import {
     MapPin, FlaskConical, Search, Star, Clock,
     Phone, ChevronRight, CheckCircle2, X,
-    Calendar, User, ArrowRight, CheckCircle, Loader2
+    Calendar, User, ArrowRight, CheckCircle, Loader2,
+    FileUp, Paperclip
 } from 'lucide-react';
+import { uploadPrescription } from '@/lib/uploadImage.js';
 
 // ── Booking Modal ─────────────────────────────────────────────────
 function BookingModal({ center, onClose }) {
@@ -26,6 +28,8 @@ function BookingModal({ center, onClose }) {
     const [patientName, setPatientName] = useState(user?.user_metadata?.full_name || '');
     const [patientPhone, setPatientPhone] = useState(user?.user_metadata?.phone || '');
     const [booking, setBooking] = useState(false);
+    const [prescriptionFile, setPrescriptionFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const slots = ['08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM'];
 
@@ -43,6 +47,19 @@ function BookingModal({ center, onClose }) {
         }
         setBooking(true);
         try {
+            let prescriptionUrl = null;
+            if (prescriptionFile) {
+                setIsUploading(true);
+                try {
+                    prescriptionUrl = await uploadPrescription(prescriptionFile, user?.id || 'anonymous');
+                } catch (uploadErr) {
+                    console.error('Prescription upload failed:', uploadErr);
+                    toast.error('Failed to upload prescription. Proceeding without it.');
+                } finally {
+                    setIsUploading(false);
+                }
+            }
+
             const { error } = await supabase.from('appointments').insert([{
                 patient_id: user?.id || null,
                 patient_name: patientName.trim(),
@@ -57,6 +74,7 @@ function BookingModal({ center, onClose }) {
                 type: 'diagnostic',
                 fee: 0,
                 notes: `Diagnostic test: ${selectedTest} at ${center.name}`,
+                prescription_url: prescriptionUrl,
             }]);
             if (error) throw error;
             setStep(3);
@@ -109,9 +127,34 @@ function BookingModal({ center, onClose }) {
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                             {/* Select Test */}
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                    <FlaskConical size={16} className="text-emerald-500" /> Select Test
-                                </label>
+                                <div className="flex justify-between items-end">
+                                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                        <FlaskConical size={16} className="text-emerald-500" /> Select Test
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            id="prescription-upload"
+                                            className="hidden"
+                                            accept="image/*,application/pdf"
+                                            onChange={(e) => setPrescriptionFile(e.target.files[0])}
+                                        />
+                                        <label
+                                            htmlFor="prescription-upload"
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                                                prescriptionFile
+                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                                                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-emerald-300'
+                                            }`}
+                                        >
+                                            {prescriptionFile ? (
+                                                <><Paperclip size={14} /> {prescriptionFile.name.slice(0, 15)}...</>
+                                            ) : (
+                                                <><FileUp size={14} /> Upload Prescription</>
+                                            )}
+                                        </label>
+                                    </div>
+                                </div>
                                 {center.tests.length > 0 ? (
                                     <>
                                         <div className="relative">
@@ -316,6 +359,14 @@ function BookingModal({ center, onClose }) {
                                     <span className="text-slate-500 font-medium">Time</span>
                                     <span className="font-bold text-slate-800">{selectedSlot}</span>
                                 </div>
+                                {prescriptionFile && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 font-medium">Prescription</span>
+                                        <span className="font-bold text-emerald-600 flex items-center gap-1">
+                                            <Paperclip size={12} /> Attached
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500 font-medium">Patient</span>
                                     <span className="font-bold text-slate-800">{patientName}</span>
