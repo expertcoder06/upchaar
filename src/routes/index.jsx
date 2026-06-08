@@ -61,6 +61,7 @@ const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicy.jsx'));
 const PatientLogin     = lazy(() => import('@/patient/pages/PatientLogin.jsx'));
 const PatientRegister  = lazy(() => import('@/patient/pages/PatientRegister.jsx'));
 const PatientDashboard = lazy(() => import('@/patient/pages/PatientDashboard.jsx'));
+const PatientDiagnosticBookings = lazy(() => import('@/patient/pages/DiagnosticBookings.jsx'));
 
 // ── ADMIN pages ───────────────────────────────────────
 const AdminLogin              = lazy(() => import('@/admin/pages/AdminLogin.jsx'));
@@ -180,6 +181,7 @@ export function AppRoutes() {
             <Route path="/patient/login" element={<PatientLogin />} />
             <Route path="/patient/register" element={<PatientRegister />} />
             <Route path="/patient/dashboard" element={<RequireAuth><AppLayout><PatientDashboard /></AppLayout></RequireAuth>} />
+            <Route path="/patient/diagnostic-bookings" element={<RequireAuth><AppLayout><PatientDiagnosticBookings /></AppLayout></RequireAuth>} />
 
 
             {/* ═══════════════════════════════════════

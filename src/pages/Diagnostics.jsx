@@ -12,7 +12,7 @@ import { toast, Toaster } from 'sonner';
 import {
     MapPin, FlaskConical, Search, Star, Clock,
     Phone, ChevronRight, CheckCircle2, X,
-    Calendar, User, ArrowRight, CheckCircle, Loader2
+    Calendar, User, ArrowRight, CheckCircle, Loader2, Camera
 } from 'lucide-react';
 
 // ── Booking Modal ─────────────────────────────────────────────────
@@ -20,6 +20,8 @@ function BookingModal({ center, onClose }) {
     const { user } = useAuth();
     const [step, setStep] = useState(1); // 1: test+date, 2: details, 3: confirmed
     const [selectedTest, setSelectedTest] = useState('');
+    const [manualTest, setManualTest] = useState('');
+    const [prescriptionFile, setPrescriptionFile] = useState(null);
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedSlot, setSelectedSlot] = useState('');
     const [testSearch, setTestSearch] = useState('');
@@ -43,12 +45,20 @@ function BookingModal({ center, onClose }) {
         }
         setBooking(true);
         try {
+            let uploadedUrl = null;
+            if (prescriptionFile) {
+                const { uploadPrescription } = await import('@/lib/uploadImage.js');
+                uploadedUrl = await uploadPrescription(prescriptionFile, user?.id || 'guest');
+            }
+
+            const finalTest = selectedTest || manualTest || (prescriptionFile ? 'Prescription Uploaded' : 'Unknown Test');
+
             const { error } = await supabase.from('appointments').insert([{
                 patient_id: user?.id || null,
                 patient_name: patientName.trim(),
                 patient_phone: patientPhone.trim(),
                 doctor_name: center.name,
-                specialization: selectedTest,
+                specialization: finalTest,
                 organization_id: center.id,
                 organization_type: 'diagnostic',
                 date: selectedDate,
@@ -56,13 +66,13 @@ function BookingModal({ center, onClose }) {
                 status: 'Confirmed',
                 type: 'diagnostic',
                 fee: 0,
-                notes: `Diagnostic test: ${selectedTest} at ${center.name}`,
+                notes: uploadedUrl ? `Diagnostic test: ${finalTest} at ${center.name}\nPrescription: ${uploadedUrl}` : `Diagnostic test: ${finalTest} at ${center.name}`,
             }]);
             if (error) throw error;
             setStep(3);
         } catch (err) {
             console.error(err);
-            toast.error('Booking failed. Please try again.');
+            toast.error(err.message || 'Booking failed. Please try again.');
         } finally {
             setBooking(false);
         }
@@ -108,17 +118,17 @@ function BookingModal({ center, onClose }) {
                     {step === 1 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                             {/* Select Test */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                    <FlaskConical size={16} className="text-emerald-500" /> Select Test
+                                    <FlaskConical size={16} className="text-emerald-500" /> Select Test or Upload Prescription
                                 </label>
-                                {center.tests.length > 0 ? (
+                                {center.tests.length > 0 && (
                                     <>
                                         <div className="relative">
                                             <Search size={14} className="absolute left-3 top-3 text-slate-400" />
                                             <input
                                                 type="text"
-                                                placeholder="Search test..."
+                                                placeholder="Search available test..."
                                                 value={testSearch}
                                                 onChange={e => setTestSearch(e.target.value)}
                                                 className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:border-emerald-400 transition-colors"
@@ -132,7 +142,7 @@ function BookingModal({ center, onClose }) {
                                                     return (
                                                         <button
                                                             key={test}
-                                                            onClick={() => setSelectedTest(test)}
+                                                            onClick={() => { setSelectedTest(test); setManualTest(''); }}
                                                             className={`p-3 rounded-xl border-2 text-sm text-left transition-all ${
                                                                 selectedTest === test
                                                                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
@@ -153,18 +163,57 @@ function BookingModal({ center, onClose }) {
                                             )}
                                         </div>
                                     </>
-                                ) : (
+                                )}
+                                
+                                <div className="text-sm text-slate-500 font-medium text-center">OR</div>
+
+                                <div className="space-y-3">
                                     <div className="relative">
                                         <FlaskConical size={14} className="absolute left-3 top-3 text-slate-400" />
                                         <input
                                             type="text"
-                                            placeholder="Enter test name (e.g. CBC, X-Ray...)"
-                                            value={selectedTest}
-                                            onChange={e => setSelectedTest(e.target.value)}
+                                            placeholder="Enter test name manually (e.g. CBC)"
+                                            value={manualTest}
+                                            onChange={e => { setManualTest(e.target.value); setSelectedTest(''); }}
                                             className="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-emerald-400 transition-colors"
                                         />
                                     </div>
-                                )}
+                                    <div className="text-sm text-slate-500 font-medium text-center">OR</div>
+                                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-emerald-400 transition-colors bg-slate-50">
+                                        <input 
+                                            type="file" 
+                                            id="prescription-upload"
+                                            className="hidden" 
+                                            accept="image/*,.pdf"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file && file.size > 5 * 1024 * 1024) {
+                                                    toast.error('File size must be under 5MB');
+                                                    return;
+                                                }
+                                                setPrescriptionFile(file);
+                                                setSelectedTest('');
+                                            }}
+                                        />
+                                        <label htmlFor="prescription-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                                            <div className="w-10 h-10 bg-white shadow-sm rounded-full flex items-center justify-center text-emerald-600">
+                                                <Camera size={18} />
+                                            </div>
+                                            <div className="text-sm font-bold text-slate-700">
+                                                {prescriptionFile ? prescriptionFile.name : 'Upload Doctor Prescription'}
+                                            </div>
+                                            <div className="text-xs text-slate-500">Max 5MB (Images or PDF)</div>
+                                        </label>
+                                        {prescriptionFile && (
+                                            <button 
+                                                onClick={() => setPrescriptionFile(null)} 
+                                                className="mt-2 text-xs text-red-500 font-bold hover:underline"
+                                            >
+                                                Remove File
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Select Date */}
@@ -224,7 +273,7 @@ function BookingModal({ center, onClose }) {
 
                             <Button
                                 onClick={() => setStep(2)}
-                                disabled={!selectedTest || !selectedDate || !selectedSlot}
+                                disabled={!(selectedTest || manualTest || prescriptionFile) || !selectedDate || !selectedSlot}
                                 className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 rounded-2xl font-bold text-base gap-2"
                             >
                                 Continue <ArrowRight size={18} />
@@ -238,7 +287,7 @@ function BookingModal({ center, onClose }) {
                             {/* Summary */}
                             <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 space-y-1">
                                 <p className="text-xs text-emerald-600 font-bold uppercase tracking-wide">Your Selection</p>
-                                <p className="font-bold text-slate-800">{selectedTest}</p>
+                                <p className="font-bold text-slate-800">{selectedTest || manualTest || (prescriptionFile ? 'Prescription Uploaded' : '')}</p>
                                 <p className="text-sm text-slate-500">
                                     {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} · {selectedSlot}
                                 </p>
@@ -304,7 +353,7 @@ function BookingModal({ center, onClose }) {
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500 font-medium">Test</span>
-                                    <span className="font-bold text-slate-800">{selectedTest}</span>
+                                    <span className="font-bold text-slate-800">{selectedTest || manualTest || (prescriptionFile ? 'Prescription Uploaded' : '')}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500 font-medium">Date</span>
@@ -358,10 +407,23 @@ export default function DiagnosticsPage() {
                 const merged = (profileData || []).map(p => {
                     const dc = centerMap[p.id];
                     // Tests stored as [{id,name,price,category,status}] or plain strings
-                    const rawTests = Array.isArray(dc?.tests) ? dc.tests : [];
+                    let parsedTests = [];
+                    try {
+                        parsedTests = typeof dc?.tests === 'string' ? JSON.parse(dc.tests) : (dc?.tests || []);
+                    } catch (e) {
+                        parsedTests = [];
+                    }
+                    const rawTests = Array.isArray(parsedTests) ? parsedTests : [];
                     const activeTestNames = rawTests
-                        .filter(t => typeof t === 'object' ? t.status === 'Active' : true)
-                        .map(t => typeof t === 'object' ? t.name : t);
+                        .map(t => {
+                            if (typeof t === 'string') {
+                                try { const pt = JSON.parse(t); return typeof pt === 'object' && pt !== null ? pt : { name: t }; } 
+                                catch (e) { return { name: t }; }
+                            }
+                            return t;
+                        })
+                        .filter(t => t && (t.status === 'Active' || !t.status))
+                        .map(t => t.name || String(t));
                     return {
                         id: p.id,
                         name: dc?.name || p.full_name || 'Diagnostic Center',
@@ -379,10 +441,23 @@ export default function DiagnosticsPage() {
 
                 (centerData || []).forEach(dc => {
                     if (!merged.find(m => m.id === dc.profile_id)) {
-                        const rawTests = Array.isArray(dc.tests) ? dc.tests : [];
+                        let parsedTests = [];
+                        try {
+                            parsedTests = typeof dc?.tests === 'string' ? JSON.parse(dc.tests) : (dc?.tests || []);
+                        } catch (e) {
+                            parsedTests = [];
+                        }
+                        const rawTests = Array.isArray(parsedTests) ? parsedTests : [];
                         const activeTestNames = rawTests
-                            .filter(t => typeof t === 'object' ? t.status === 'Active' : true)
-                            .map(t => typeof t === 'object' ? t.name : t);
+                            .map(t => {
+                                if (typeof t === 'string') {
+                                    try { const pt = JSON.parse(t); return typeof pt === 'object' && pt !== null ? pt : { name: t }; } 
+                                    catch (e) { return { name: t }; }
+                                }
+                                return t;
+                            })
+                            .filter(t => t && (t.status === 'Active' || !t.status))
+                            .map(t => t.name || String(t));
                         merged.push({
                             id: dc.id,
                             name: dc.name || 'Diagnostic Center',
@@ -591,16 +666,25 @@ export default function DiagnosticsPage() {
                                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available Tests</p>
                                             {center.tests.length > 0 ? (
                                                 <div className="flex flex-wrap gap-2">
-                                                    {center.tests.map(test => (
+                                                    {center.tests.slice(0, 3).map(test => (
                                                         <Badge
                                                             key={test}
                                                             variant="secondary"
                                                             onClick={() => setBookingCenter(center)}
-                                                            className="bg-slate-50 text-slate-600 border-slate-100 hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer"
+                                                            className="bg-slate-50 text-slate-600 border-slate-100 hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer truncate max-w-full"
                                                         >
                                                             {test}
                                                         </Badge>
                                                     ))}
+                                                    {center.tests.length > 3 && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            onClick={() => setBookingCenter(center)}
+                                                            className="bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 transition-colors cursor-pointer font-bold"
+                                                        >
+                                                            +{center.tests.length - 3} More
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <p className="text-sm text-slate-400 italic">No tests listed yet.</p>
