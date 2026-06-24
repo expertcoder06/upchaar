@@ -270,6 +270,11 @@ export default function BookAppointment() {
     }, [searchParams]);
 
     // ── Navigation & Actions ─────────────────────────
+    const baseFee = selectedDoctor?.consultation_fee ?? selectedDoctor?.fees ?? 500;
+    const bookingCharge = selectedDoctor?.booking_charges || 0;
+    const platformFee = selectedDoctor?.platform_fee || 0;
+    const totalFee = baseFee + bookingCharge + platformFee;
+
     const handleConfirmSlots = () => {
         if (user) {
             setStep(4);
@@ -394,7 +399,8 @@ export default function BookAppointment() {
                 time_slot: selectedSlot,
                 status: 'Confirmed',
                 type: 'In-person',       // DB constraint allows: 'In-person' | 'Online'
-                fee: selectedDoctor.fees || 500,
+                fee: totalFee,
+                platform_revenue: platformFee,
                 queue_number: null,       // no queue for scheduled bookings
                 specialization: selectedDoctor.specialization ?? null,
             };
@@ -629,7 +635,9 @@ export default function BookAppointment() {
                                                             </div>
                                                         </div>
                                                         <div className="pt-4 border-t flex items-center justify-between">
-                                                            <span className="text-sm font-bold text-slate-700">₹{doc.fees || 500} <span className="text-slate-400 font-normal">Fee</span></span>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-slate-700">₹{(doc.consultation_fee ?? doc.fees ?? 500) + (doc.booking_charges || 0) + (doc.platform_fee || 0)} <span className="text-slate-400 font-normal">Fee</span></span>
+                                                            </div>
                                                             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 group">
                                                                 Book Now
                                                                 <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" />
@@ -687,8 +695,17 @@ export default function BookAppointment() {
                                                 <div className="w-[1px] bg-slate-100" />
                                                 <div className="text-center">
                                                     <p className="text-xs text-slate-400 font-bold uppercase">Consultation</p>
-                                                    <p className="font-bold">₹{selectedDoctor.fees || 500}</p>
+                                                    <p className="font-bold">₹{baseFee}</p>
                                                 </div>
+                                                {(bookingCharge > 0 || platformFee > 0) && (
+                                                    <>
+                                                        <div className="w-[1px] bg-slate-100" />
+                                                        <div className="text-center">
+                                                            <p className="text-xs text-slate-400 font-bold uppercase">Total Fee</p>
+                                                            <p className="font-bold text-emerald-600">₹{totalFee}</p>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -964,19 +981,19 @@ export default function BookAppointment() {
                                             <div className="h-[1px] bg-slate-100 my-4" />
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-slate-500">Consultation Fee</span>
-                                                <span className="font-bold">₹{selectedDoctor.fees || 500}</span>
+                                                <span className="font-bold">₹{baseFee}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-slate-500">Booking Charges</span>
-                                                <span className="font-bold">FREE</span>
+                                                <span className="font-bold">{bookingCharge === 0 ? 'FREE' : `₹${bookingCharge}`}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-slate-500">Platform Fee</span>
-                                                <span className="font-bold">FREE</span>
+                                                <span className="font-bold">{platformFee === 0 ? 'FREE' : `₹${platformFee}`}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-lg pt-4 border-t font-black">
                                                 <span className="text-slate-900">Total Payable</span>
-                                                <span className="text-blue-600">₹{(selectedDoctor.fees || 500)}</span>
+                                                <span className="text-emerald-600">₹{totalFee}</span>
                                             </div>
                                         </div>
 

@@ -8,6 +8,7 @@ import ChangePasswordModal from '@/components/ChangePasswordModal.jsx';
 import ImageCropperModal from '@/components/ImageCropperModal.jsx';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import ProviderPendingPage from '@/components/ProviderPendingPage.jsx';
 
 import {
   AlertDialog,
@@ -80,6 +81,10 @@ export default function ClinicDashboard() {
   const fileInputRef = useRef(null);
 
   const displayName = profile?.full_name || profile?.name || 'Clinic Center';
+
+  if (profile?.status?.toLowerCase() === 'pending' || profile?.status?.toLowerCase() === 'rejected' || profile?.status?.toLowerCase() === 'suspended') {
+      return <ProviderPendingPage profile={profile} />;
+  }
 
   const handleQuickAvatarChange = async (e) => {
     const file = e.target.files?.[0];

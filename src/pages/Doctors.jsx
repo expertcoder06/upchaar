@@ -80,7 +80,7 @@ export default function DoctorsPage() {
                             rating: Number(d.rating) || 4.5,
                             reviews: d.total_appointments || 0,
                             verified: true,
-                            fees: d.consultation_fee || 0,
+                            fees: (d.consultation_fee || 0) + (d.booking_charges || 0) + (d.platform_fee || 0),
                             languages: d.languages || [],
                             hasVideo,
                         };
@@ -425,7 +425,7 @@ function DoctorCard({ doctor }) {
                                 <p className="text-sm font-bold text-slate-700">{doctor.experience} Years</p>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consultation</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fee</p>
                                 <p className="text-sm font-bold text-slate-700">₹{doctor.fees}</p>
                             </div>
                         </div>

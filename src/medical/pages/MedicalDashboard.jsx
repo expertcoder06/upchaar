@@ -12,6 +12,7 @@ import ImageCropperModal from '@/components/ImageCropperModal.jsx';
 import { toast, Toaster } from 'sonner';
 import MedicalAnalytics from './MedicalAnalytics';
 import { uploadAvatar, getStorageUrl } from '@/lib/uploadImage.js';
+import ProviderPendingPage from '@/components/ProviderPendingPage.jsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +75,10 @@ export default function MedicalDashboard() {
   const [internalOrgId, setInternalOrgId] = useState(null);
   const sidebarRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  if (profile?.status?.toLowerCase() === 'pending' || profile?.status?.toLowerCase() === 'rejected' || profile?.status?.toLowerCase() === 'suspended') {
+      return <ProviderPendingPage profile={profile} />;
+  }
 
   const handleQuickAvatarChange = async (e) => {
     const file = e.target.files?.[0];

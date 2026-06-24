@@ -9,11 +9,10 @@ import {
     ChevronLeft, ChevronRight, Menu, Plus, X, Filter, Trash2,
     Camera, Loader2, User, Phone, MapPin, Globe, Save
 } from 'lucide-react';
-
-
 import { supabase } from '@/lib/supabase.js';
 import { uploadAvatar, getStorageUrl } from '@/lib/uploadImage.js';
 import { toast, Toaster } from 'sonner';
+import ProviderPendingPage from '@/components/ProviderPendingPage.jsx';
 
 export default function DiagnosticDashboard() {
     const { profile, signOut, refreshProfile } = useAuth();
@@ -59,6 +58,10 @@ export default function DiagnosticDashboard() {
             });
         }
     }, [profile]);
+
+    if (profile?.status?.toLowerCase() === 'pending' || profile?.status?.toLowerCase() === 'rejected' || profile?.status?.toLowerCase() === 'suspended') {
+        return <ProviderPendingPage profile={profile} />;
+    }
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();

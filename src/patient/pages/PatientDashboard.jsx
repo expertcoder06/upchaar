@@ -15,7 +15,7 @@ import {
     User, Calendar, FileText, Pill,
     MapPin, ChevronRight, Activity, Camera, Loader2,
     Hash, Clock, CalendarCheck2, Stethoscope, ChevronLeft, ChevronRight as ChevronRightIcon, Store,
-    CheckCircle2, FlaskConical, XCircle, AlertTriangle
+    CheckCircle2, FlaskConical, XCircle, AlertTriangle, Star
 } from 'lucide-react';
 import { uploadAvatar, getStorageUrl } from '@/lib/uploadImage.js';
 import { supabase } from '@/lib/supabase.js';
@@ -23,6 +23,100 @@ import ChangePasswordModal from '@/components/ChangePasswordModal.jsx';
 import Skeleton from 'react-loading-skeleton';
 import QueueStatusCard from '@/components/QueueStatusCard.jsx';
 import { toast, Toaster } from 'sonner';
+
+/* ── Rating Modal ── */
+function RatingModal({ isOpen, onClose, appointment, patientId, onRated }) {
+    const [rating, setRating] = useState(0);
+    const [hover, setHover] = useState(0);
+    const [comment, setComment] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    if (!isOpen || !appointment) return null;
+
+    const handleSubmit = async () => {
+        if (rating === 0) {
+            toast.error('Please select a star rating.');
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const { error } = await supabase.from('doctor_reviews').insert({
+                doctor_id: appointment.doctor_id,
+                patient_id: patientId,
+                appointment_id: appointment.id,
+                rating,
+                comment
+            });
+            if (error) {
+                if (error.code === '23505') {
+                    toast.error('You have already rated this appointment.');
+                } else {
+                    throw error;
+                }
+            } else {
+                toast.success('Thank you for your feedback!');
+                if (onRated) onRated(appointment.id);
+                onClose();
+            }
+        } catch (err) {
+            toast.error(err.message || 'Failed to submit rating.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-3xl shadow-xl max-w-sm w-full p-6"
+            >
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Rate your visit</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                        <XCircle size={20} />
+                    </button>
+                </div>
+                <p className="text-sm text-slate-500 mb-6">How was your consultation with {appointment.doctor_name}?</p>
+                
+                <div className="flex justify-center gap-2 mb-6">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                            key={star}
+                            type="button"
+                            className="focus:outline-none transition-transform hover:scale-110"
+                            onClick={() => setRating(star)}
+                            onMouseEnter={() => setHover(star)}
+                            onMouseLeave={() => setHover(rating)}
+                        >
+                            <Star 
+                                size={36} 
+                                className={`${(hover || rating) >= star ? 'fill-amber-400 text-amber-400' : 'text-slate-200'} transition-colors`} 
+                            />
+                        </button>
+                    ))}
+                </div>
+
+                <textarea
+                    placeholder="Add a comment (optional)..."
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 mb-6 min-h-[80px]"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                />
+
+                <button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="w-full py-3 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 transition disabled:opacity-50 flex items-center justify-center"
+                >
+                    {submitting ? <Loader2 size={16} className="animate-spin" /> : 'Submit Rating'}
+                </button>
+            </motion.div>
+        </div>
+    );
+}
+
 // ── Quick action cards shown on the dashboard ─────
 const QUICK_ACTIONS = [
     { icon: Calendar, label: 'Doctors', desc: 'Schedule with a doctor', color: 'from-blue-500 to-indigo-500', href: '/doctors' },
@@ -432,6 +526,8 @@ export default function PatientDashboard() {
     const [completionNotice, setCompletionNotice] = useState(null);
     const [cancellationNotice, setCancellationNotice] = useState(null);
     const [upcomingRefreshKey, setUpcomingRefreshKey] = useState(0);
+    const [reviewedAppointments, setReviewedAppointments] = useState(new Set());
+    const [ratingAppointment, setRatingAppointment] = useState(null);
     const completionNoticeTimerRef = useRef(null);
     const cancellationNoticeTimerRef = useRef(null);
 
@@ -498,7 +594,20 @@ export default function PatientDashboard() {
                 .limit(20);
 
             if (error) throw error;
-            setOldAppointments(data || []);
+            const fetchedAppts = data || [];
+            setOldAppointments(fetchedAppts);
+
+            if (fetchedAppts.length > 0) {
+                const apptIds = fetchedAppts.map(a => a.id);
+                const { data: reviewsData } = await supabase
+                    .from('doctor_reviews')
+                    .select('appointment_id')
+                    .in('appointment_id', apptIds);
+                
+                if (reviewsData) {
+                    setReviewedAppointments(new Set(reviewsData.map(r => r.appointment_id)));
+                }
+            }
         } catch (err) {
             console.error('Error fetching old appointments:', err.message);
             setOldAppointments([]);
@@ -763,12 +872,22 @@ export default function PatientDashboard() {
                                         </p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => navigate(`/prescription/${completionNotice.id}`)}
-                                    className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition shadow-md shadow-emerald-200"
-                                >
-                                    View Prescription
-                                </button>
+                                <div className="flex gap-2">
+                                    {!reviewedAppointments.has(completionNotice.id) && (
+                                        <button 
+                                            onClick={() => setRatingAppointment(completionNotice)}
+                                            className="px-4 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition shadow-md shadow-amber-200"
+                                        >
+                                            Rate Doctor
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => navigate(`/prescription/${completionNotice.id}`)}
+                                        className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition shadow-md shadow-emerald-200"
+                                    >
+                                        View Prescription
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     ) : cancellationNotice ? (
@@ -893,6 +1012,16 @@ export default function PatientDashboard() {
                                         >
                                             <FileText size={16} />
                                         </Link>
+                                        {!reviewedAppointments.has(apt.id) && (
+                                            <button
+                                                onClick={() => setRatingAppointment(apt)}
+                                                className="h-9 px-3 rounded-xl bg-amber-100 text-amber-600 flex items-center gap-1.5 hover:bg-amber-200 transition font-medium text-xs"
+                                                title="Rate Doctor"
+                                            >
+                                                <Star size={14} className="fill-amber-500 text-amber-500" />
+                                                Rate
+                                            </button>
+                                        )}
                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border bg-emerald-50 text-emerald-600 border-emerald-100">
                                             <CheckCircle2 size={11} />
                                             Completed
@@ -905,6 +1034,13 @@ export default function PatientDashboard() {
                 </div>
             </div>
             <ChangePasswordModal isOpen={changePwOpen} onClose={() => setChangePwOpen(false)} />
+            <RatingModal
+                isOpen={!!ratingAppointment}
+                onClose={() => setRatingAppointment(null)}
+                appointment={ratingAppointment}
+                patientId={patient?.id}
+                onRated={(id) => setReviewedAppointments(prev => new Set(prev).add(id))}
+            />
         </>
     );
 }

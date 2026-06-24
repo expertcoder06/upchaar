@@ -457,7 +457,7 @@ export default function DiagnosticsPage() {
             setLoading(true);
             try {
                 const { data: profileData } = await supabase
-                    .from('profiles').select('*').eq('profile_type', 'diagnostic');
+                    .from('profiles').select('*').eq('profile_type', 'diagnostic').eq('status', 'active');
 
                 const { data: centerData } = await supabase
                     .from('diagnostic_centers').select('*');

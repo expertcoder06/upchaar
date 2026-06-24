@@ -466,8 +466,27 @@ export default function LoginPage() {
                                     </div>
                                 </div>
 
-                                {/* Full Name */}
-                                <div>
+                                {signUpForm.profileType === 'hospital' ? (
+                                    <div className="py-6 flex flex-col items-center text-center space-y-4">
+                                        <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                                            <HospitalIcon size={32} />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-800">Hospital Integration Not Started</h3>
+                                        <p className="text-sm text-slate-500 max-w-sm">
+                                            Currently, hospital integration has not started on our platform. 
+                                            If you represent a hospital, please contact our team for early access or partnerships.
+                                        </p>
+                                        <a 
+                                            href="mailto:mainupchaarhealth@gmail.com"
+                                            className="mt-4 px-6 py-2.5 rounded-xl bg-slate-800 text-white font-semibold text-sm hover:bg-slate-700 transition"
+                                        >
+                                            Contact Us
+                                        </a>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Full Name */}
+                                        <div>
                                     <label className="block text-xs font-semibold text-slate-600 mb-2">Full Name</label>
                                     <div className="relative">
                                         <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -545,7 +564,9 @@ export default function LoginPage() {
                                     {loading
                                         ? <><Loader2 size={16} className="animate-spin" />Creating Account…</>
                                         : <><ShieldCheck size={16} />Create Account</>}
-                                </button>
+                                    </button>
+                                    </>
+                                )}
 
                                 <p className="text-center text-sm text-slate-500">
                                     Already have an account?{' '}
