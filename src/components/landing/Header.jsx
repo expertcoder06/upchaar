@@ -106,6 +106,7 @@ export const Header = () => {
     const navLinks = [
         { href: '/', name: 'Home' },
         { href: '/patient/dashboard', name: 'My Appointments' },
+        { href: '/patient/diagnostic-bookings', name: 'Diagnostic Tests' },
         { href: '/blogs', name: 'Blog' },
         { href: '/services', name: 'Our Services' },
     ];
