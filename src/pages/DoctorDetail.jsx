@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -236,6 +236,9 @@ export default function DoctorDetailPage() {
     const [confirmed, setConfirmed] = useState(null);   // { date, time, queue }
     // Booking in-progress spinner
     const [booking, setBooking] = useState(false);
+    
+    // Dynamically fetched doctor timetables
+    const [doctorTimetables, setDoctorTimetables] = useState([]);
 
     useEffect(() => {
         const fetchDoctorDetails = async () => {
@@ -326,9 +329,10 @@ export default function DoctorDetailPage() {
                     avatar: data.avatar_url || null,
                     experience: data.experience || 0,
                     rating: Number(data.rating) || 4.5,
-                    reviews: data.total_appointments || 0,
                     verified: true,
                     fees: data.consultation_fee || 0,
+                    bookingCharges: data.booking_charges || 0,
+                    platformFee: data.platform_fee || 0,
                     clinicName: data.clinic_name || '',
                     clinicNames: fetchedClinicNames,
                     clinics: fetchedClinics,
@@ -342,6 +346,17 @@ export default function DoctorDetailPage() {
                     institution: data.institution,
                     city: data.city,
                 });
+
+                // Fetch doctor timetables
+                const { data: ttData, error: ttError } = await supabase
+                    .from('doctor_timetables')
+                    .select('*')
+                    .eq('doctor_id', id)
+                    .eq('is_active', true);
+
+                if (!ttError) {
+                    setDoctorTimetables(ttData || []);
+                }
             } catch (err) {
                 console.error(err);
             } finally {
@@ -360,6 +375,43 @@ export default function DoctorDetailPage() {
             setSelectedClinic(prev => prev || { id: null, name: doctor.clinicName, type: 'clinic' });
         }
     }, [doctor]);
+
+    // Calculate dynamic available slots for the selected clinic and date
+    const availableSlots = useMemo(() => {
+        if (!selectedClinic || !selectedDate) return [];
+        const dStr = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
+
+        const matchedOrgId = selectedClinic.id;
+        const matched = doctorTimetables.filter(t => t.org_id === matchedOrgId && t.day === dStr);
+        if (matched.length === 0) return [];
+
+        const slots = [];
+        matched.forEach(t => {
+            let [h1, m1] = t.time_from.split(':').map(Number);
+            let [h2, m2] = t.time_to.split(':').map(Number);
+            let start = h1 * 60 + m1;
+            let end = h2 * 60 + m2;
+            
+            for (let min = start; min < end; min += 30) {
+                let hh = Math.floor(min / 60);
+                let mm = min % 60;
+                let ampm = hh >= 12 ? 'PM' : 'AM';
+                let dh = hh % 12 || 12;
+                slots.push(`${dh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')} ${ampm}`);
+            }
+        });
+        
+        return [...new Set(slots)];
+    }, [selectedClinic, selectedDate, doctorTimetables]);
+
+    // Which days have at least one active slot in that clinic?
+    const daysWithSlots = useMemo(() => {
+        if (!selectedClinic) return new Set();
+        const matchedOrgId = selectedClinic.id;
+        return new Set(doctorTimetables.filter(t => t.org_id === matchedOrgId).map(t => {
+            return t.day.substring(0, 3);
+        }));
+    }, [selectedClinic, doctorTimetables]);
 
     /* ── Step 1: open warning modal ── */
     const handleBookClick = (type) => {
@@ -422,8 +474,8 @@ export default function DoctorDetailPage() {
                 organization_id: selectedClinic?.id ?? null,
                 organization_type: selectedClinic?.type ?? 'clinic',
                 clinic_name: selectedClinic?.name || doctor.clinicName || null,
-                fee: doctor.fees,
-                platform_revenue: 50,
+                fee: Number(doctor.fees) + Number(doctor.bookingCharges) + Number(doctor.platformFee),
+                platform_revenue: Number(doctor.platformFee),
             };
 
             let { error: insertErr } = await supabase
@@ -650,7 +702,7 @@ export default function DoctorDetailPage() {
 
                             <div className="px-6 pb-5 text-center">
                                 <p className="text-[11px] text-teal-600/80 uppercase tracking-widest font-bold mb-1">Consultation Fee</p>
-                                <p className="text-4xl font-bold text-teal-600">₹{doctor.fees}</p>
+                                <p className="text-4xl font-bold text-teal-600">₹{Number(doctor.fees) + Number(doctor.bookingCharges) + Number(doctor.platformFee)}</p>
                             </div>
 
                             <div className="px-6 pb-6">
@@ -715,19 +767,25 @@ export default function DoctorDetailPage() {
                                         Select Time Slot
                                     </p>
                                     <div className="grid grid-cols-2 gap-3 mt-4">
-                                        {['09:00 AM', '11:30 AM', '02:00 PM', '04:30 PM'].map((time) => (
-                                            <Button
-                                                key={time}
-                                                variant={selectedSlot === time ? 'default' : 'outline'}
-                                                className={selectedSlot === time
-                                                    ? 'bg-teal-600 hover:bg-teal-700 shadow-md font-semibold text-white ring-1 ring-teal-700'
-                                                    : 'border-gray-200 hover:border-teal-600 hover:bg-teal-50 hover:text-teal-700 text-gray-600 font-medium'
-                                                }
-                                                onClick={() => setSelectedSlot(time)}
-                                            >
-                                                {time}
-                                            </Button>
-                                        ))}
+                                        {availableSlots.length > 0 ? (
+                                            availableSlots.map((time) => (
+                                                <Button
+                                                    key={time}
+                                                    variant={selectedSlot === time ? 'default' : 'outline'}
+                                                    className={selectedSlot === time
+                                                        ? 'bg-teal-600 hover:bg-teal-700 shadow-md font-semibold text-white ring-1 ring-teal-700'
+                                                        : 'border-gray-200 hover:border-teal-600 hover:bg-teal-50 hover:text-teal-700 text-gray-600 font-medium'
+                                                    }
+                                                    onClick={() => setSelectedSlot(time)}
+                                                >
+                                                    {time}
+                                                </Button>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-2 text-center text-sm text-gray-500 italic py-2">
+                                                No slots available for this date.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -770,12 +828,16 @@ export default function DoctorDetailPage() {
                                     <span>₹{doctor.fees}.00</span>
                                 </div>
                                 <div className="flex justify-between text-sm text-gray-600 font-medium">
+                                    <span>Booking Charges:</span>
+                                    <span>{Number(doctor.bookingCharges) === 0 ? 'FREE' : `₹${doctor.bookingCharges}.00`}</span>
+                                </div>
+                                <div className="flex justify-between text-sm text-gray-600 font-medium">
                                     <span>Platform Fee:</span>
-                                    <span>₹50.00</span>
+                                    <span>{Number(doctor.platformFee) === 0 ? 'FREE' : `₹${doctor.platformFee}.00`}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-gray-900 pt-3 border-t border-gray-200 mt-3 text-base">
                                     <span>Total Payable:</span>
-                                    <span className="text-teal-600">₹{parseInt(doctor.fees) + 50}.00</span>
+                                    <span className="text-teal-600">₹{Number(doctor.fees) + Number(doctor.bookingCharges) + Number(doctor.platformFee)}.00</span>
                                 </div>
                             </div>
                         </div>
