@@ -46,17 +46,12 @@ const circumference = 2 * Math.PI * 54;
 
 // Linked staff will be fetched from database
 
-const MOCK_ACTIVITY = [
-  { id: 1, title: 'Walk-in: Priya Mehta', sub: 'Assigned to Dr. Patel', time: 'Today, 09:15 AM', badge: 'CHECKED IN', badgeClass: 'bg-teal-50 text-teal-700 border border-teal-100', isLast: false },
-  { id: 2, title: 'Report Uploaded: Kiran S.', sub: 'Blood work — Lab results', time: '1 hour ago', badge: 'REPORT', badgeClass: 'bg-blue-50 text-blue-700 border border-blue-100', isLast: false },
-  { id: 3, title: 'Discharge: Ramesh Kumar', sub: 'OPD visit complete', time: 'Yesterday, 6:30 PM', badge: 'DISCHARGED', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-100', isLast: true },
-];
+// Linked staff will be fetched from database
 
 export default function ClinicDashboard() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [staffDoctors, setStaffDoctors] = useState([]);
-  const [clinics, setClinics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -259,20 +254,6 @@ export default function ClinicDashboard() {
     }
   }, [profile?.id]);
 
-  const fetchClinics = useCallback(async () => {
-    if (!profile?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from('facilities')
-        .select('*')
-        .eq('type', 'clinic')
-        .limit(10);
-      if (error) throw error;
-      setClinics(data || []);
-    } catch (err) {
-      console.error('Error fetching clinics:', err.message);
-    }
-  }, [profile?.id]);
 
   const handleAddDoctor = useCallback(async (e) => {
     e.preventDefault();
@@ -370,10 +351,9 @@ export default function ClinicDashboard() {
   useEffect(() => { 
     if (profile?.id && appointments === null) {
       fetchStaff();
-      fetchClinics();
       fetchAppointments();
     }
-  }, [profile?.id, fetchStaff, fetchClinics, fetchAppointments, appointments]);
+  }, [profile?.id, fetchStaff, fetchAppointments, appointments]);
 
   // Patient avatars
   useEffect(() => {
@@ -659,38 +639,42 @@ export default function ClinicDashboard() {
 
                       <div>
                         <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 mb-4 text-gray-700">
-                          <span className="material-symbols-outlined text-teal-600">table_view</span> Registered Nodes
+                          <span className="material-symbols-outlined text-teal-600">table_view</span> Recent Appointments
                         </h3>
                         <div className="bg-white rounded-2xl overflow-x-auto" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0/0.05)' }}>
                           <table className="w-full text-sm min-w-[480px]">
                             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
                               <tr>
-                                <th className="px-4 sm:px-6 py-3 text-left font-semibold">Branch</th>
-                                <th className="px-4 sm:px-6 py-3 text-left font-semibold">City</th>
+                                <th className="px-4 sm:px-6 py-3 text-left font-semibold">Patient</th>
+                                <th className="px-4 sm:px-6 py-3 text-left font-semibold">Doctor</th>
+                                <th className="px-4 sm:px-6 py-3 text-left font-semibold">Date & Time</th>
                                 <th className="px-4 sm:px-6 py-3 text-left font-semibold">Status</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                              {clinics.length > 0 ? (
-                                clinics.map((clinic) => (
-                                  <tr key={clinic.id} className="hover:bg-gray-50 transition-colors">
+                              {appointments && appointments.length > 0 ? (
+                                appointments.slice(0, 5).map((apt) => (
+                                  <tr key={apt.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-4 sm:px-6 py-4">
-                                      <p className="font-semibold text-gray-900">{clinic.name}</p>
-                                      <p className="text-xs text-gray-500">{clinic.email}</p>
+                                      <p className="font-semibold text-gray-900">{apt.patient_name || apt.patientName || apt.patient || 'Unknown'}</p>
                                     </td>
-                                    <td className="px-4 sm:px-6 py-4 text-gray-600">{clinic.city || '—'}</td>
+                                    <td className="px-4 sm:px-6 py-4 text-gray-600">{apt.doctor_name || apt.doctorName || apt.doctor || 'Unknown'}</td>
+                                    <td className="px-4 sm:px-6 py-4 text-gray-600">
+                                      <p>{new Date(apt.date).toLocaleDateString()}</p>
+                                      <p className="text-xs text-gray-400">{apt.time_slot}</p>
+                                    </td>
                                     <td className="px-4 sm:px-6 py-4">
                                       <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                        clinic.status === 'Approved' ? 'bg-teal-50 text-teal-700' :
-                                        clinic.status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
-                                      }`}>{clinic.status}</span>
+                                        apt.status === 'Completed' ? 'bg-teal-50 text-teal-700' :
+                                        apt.status === 'Cancelled' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                                      }`}>{apt.status || 'Pending'}</span>
                                     </td>
                                   </tr>
                                 ))
                               ) : (
                                 <tr>
-                                  <td colSpan="3" className="px-4 sm:px-6 py-8 text-center text-gray-500">
-                                    No registered nodes yet.
+                                  <td colSpan="4" className="px-4 sm:px-6 py-8 text-center text-gray-500">
+                                    No appointments yet.
                                   </td>
                                 </tr>
                               )}
