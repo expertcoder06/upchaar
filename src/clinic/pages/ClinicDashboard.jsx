@@ -102,9 +102,11 @@ export default function ClinicDashboard() {
 
   // Compute approval status (used for conditional rendering AFTER all hooks)
   const profStatus = (profile?.status || '').toLowerCase();
-  const recStatus = (clinicRecord?.status || '').toLowerCase();
-  const isApproved = profStatus === 'active' || profStatus === 'approved' || recStatus === 'active' || recStatus === 'approved';
-  const isRejected = profStatus === 'rejected' || recStatus === 'rejected' || profStatus === 'suspended' || recStatus === 'suspended';
+  const recStatus = (clinicRecord?.status || 'pending').toLowerCase();
+  
+  // A clinic is approved only if its facility record is approved
+  const isApproved = recStatus === 'active' || recStatus === 'approved';
+  const isRejected = recStatus === 'rejected' || recStatus === 'suspended' || profStatus === 'suspended';
 
   const handleQuickAvatarChange = async (e) => {
     const file = e.target.files?.[0];

@@ -101,9 +101,11 @@ export default function MedicalDashboard() {
 
   // Compute approval status (used for conditional rendering AFTER all hooks)
   const profStatus = (profile?.status || '').toLowerCase();
-  const recStatus = (medicalRecord?.status || '').toLowerCase();
-  const isApproved = profStatus === 'active' || profStatus === 'approved' || recStatus === 'active' || recStatus === 'approved';
-  const isRejected = profStatus === 'rejected' || recStatus === 'rejected' || profStatus === 'suspended' || recStatus === 'suspended';
+  const recStatus = (medicalRecord?.status || 'pending').toLowerCase();
+  
+  // A medical store is approved only if its facility record is approved
+  const isApproved = recStatus === 'active' || recStatus === 'approved';
+  const isRejected = recStatus === 'rejected' || recStatus === 'suspended' || profStatus === 'suspended';
 
   const handleQuickAvatarChange = async (e) => {
     const file = e.target.files?.[0];

@@ -530,11 +530,14 @@ export default function DiagnosticDashboard() {
     }
 
     // Block if status is pending/rejected
-    const statusRaw = diagnosticRecord?.status || profile?.status || 'Pending';
+    const profStatus = (profile?.status || '').toLowerCase();
+    const statusRaw = diagnosticRecord?.status || 'Pending';
     const statusLower = statusRaw.toLowerCase();
+    
+    // A diagnostic center is approved only if its facility record is approved
     const isApproved = statusLower === 'active' || statusLower === 'approved';
 
-    if (!isApproved && (statusLower === 'pending' || statusLower === 'rejected' || statusLower === 'suspended')) {
+    if (!isApproved) {
         const pendingProfile = { ...profile, status: statusRaw, metadata: diagnosticRecord?.metadata };
         return <ProviderPendingPage profile={pendingProfile} />;
     }
