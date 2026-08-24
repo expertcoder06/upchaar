@@ -272,14 +272,22 @@ export function AuthProvider({ children }) {
                 await new Promise(r => setTimeout(r, 250));
             }
 
-            // Update profile with additional center details if available
-            if (city || state || centerPhotoUrl) {
-                await supabase.from('profiles').update({
-                    ...(city && { city: city.trim() }),
-                    ...(state && { state }),
-                    ...(centerPhotoUrl && { avatar_url: centerPhotoUrl }),
-                }).eq('id', userId);
-            }
+            // Update profile with center details in metadata, avatar_url, and whatsapp_number
+            const metadataObj = {
+                center_name: centerTitle,
+                city: city?.trim() || '',
+                state: state || '',
+                pincode: pincode?.trim() || '',
+                rejectionReason: '',
+            };
+
+            await supabase.from('profiles').update({
+                avatar_url: centerPhotoUrl || null,
+                whatsapp_number: whatsappNumber?.trim() || null,
+                metadata: metadataObj,
+                status: ['doctor', 'clinic', 'medical', 'diagnostic', 'hospital'].includes(profileType) ? 'pending' : 'active',
+                updated_at: new Date().toISOString(),
+            }).eq('id', userId);
 
             // Seed controllers table for admin roles
             if (['blogger', 'support_admin', 'super_admin'].includes(profileType)) {
@@ -293,18 +301,18 @@ export function AuthProvider({ children }) {
             }
 
             // Seed medicals or clinics or diagnostic_centers table
-            const centerTitle = (centerName || fullName).trim();
+            const fullAddress = [city?.trim(), state, pincode?.trim() ? `PIN: ${pincode.trim()}` : ''].filter(Boolean).join(', ');
             if (profileType === 'medical') {
                 await supabase.from('medicals').insert({
                     profile_id: userId,
                     name: centerTitle,
                     email: email.trim(),
-                    phone: phone?.trim() || '',
-                    whatsapp_number: whatsappNumber?.trim() || '',
-                    state: state || null,
+                    phone: phone?.trim() || null,
+                    whatsapp_number: whatsappNumber?.trim() || null,
+                    address: fullAddress || null,
                     city: city?.trim() || null,
-                    pincode: pincode?.trim() || null,
-                    image_url: centerPhotoUrl || null,
+                    state: state || null,
+                    avatar_url: centerPhotoUrl || null,
                     status: 'Pending',
                 });
             } else if (profileType === 'clinic') {
@@ -312,12 +320,12 @@ export function AuthProvider({ children }) {
                     profile_id: userId,
                     name: centerTitle,
                     email: email.trim(),
-                    phone: phone?.trim() || '',
-                    whatsapp_number: whatsappNumber?.trim() || '',
-                    state: state || null,
+                    phone: phone?.trim() || null,
+                    whatsapp_number: whatsappNumber?.trim() || null,
+                    address: fullAddress || null,
                     city: city?.trim() || null,
-                    pincode: pincode?.trim() || null,
-                    image_url: centerPhotoUrl || null,
+                    state: state || null,
+                    avatar_url: centerPhotoUrl || null,
                     status: 'Pending',
                 });
             } else if (profileType === 'diagnostic') {
@@ -325,12 +333,11 @@ export function AuthProvider({ children }) {
                     profile_id: userId,
                     name: centerTitle,
                     email: email.trim(),
-                    phone: phone?.trim() || '',
-                    whatsapp_number: whatsappNumber?.trim() || '',
-                    state: state || null,
+                    phone: phone?.trim() || null,
+                    whatsapp_number: whatsappNumber?.trim() || null,
+                    address: fullAddress || null,
                     city: city?.trim() || null,
-                    pincode: pincode?.trim() || null,
-                    image_url: centerPhotoUrl || null,
+                    avatar_url: centerPhotoUrl || null,
                     status: 'Pending',
                 });
             }
