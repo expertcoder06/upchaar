@@ -85,16 +85,20 @@ export default function ClinicDashboard() {
     let mounted = true;
     supabase
       .from('clinics')
-      .select('id, status, rejection_reason, name, city, state, pincode, image_url, phone, whatsapp_number')
+      .select('id, status, rejection_reason, name, city, state, phone, whatsapp_number, avatar_url')
       .eq('profile_id', profile.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.warn('[ClinicDashboard] clinics fetch error:', error.message);
         if (mounted) {
           setClinicRecord(data);
           setClinicStatusLoading(false);
         }
       })
-      .catch(() => { if (mounted) setClinicStatusLoading(false); });
+      .catch((err) => {
+        console.warn('[ClinicDashboard] clinics fetch catch:', err.message);
+        if (mounted) setClinicStatusLoading(false);
+      });
     return () => { mounted = false; };
   }, [profile?.id]);
 
@@ -452,11 +456,11 @@ export default function ClinicDashboard() {
     const pendingProfile = {
       ...profile,
       status: effectiveStatus,
-      center_name: clinicRecord?.name || profile?.center_name || '',
-      city: clinicRecord?.city || profile?.city || '',
-      state: clinicRecord?.state || profile?.state || '',
-      pincode: clinicRecord?.pincode || profile?.pincode || '',
-      avatar_url: clinicRecord?.image_url || profile?.avatar_url || null,
+      center_name: clinicRecord?.name || profile?.metadata?.center_name || '',
+      city: clinicRecord?.city || profile?.metadata?.city || '',
+      state: clinicRecord?.state || profile?.metadata?.state || '',
+      pincode: profile?.metadata?.pincode || '',
+      avatar_url: clinicRecord?.avatar_url || profile?.avatar_url || null,
       phone: clinicRecord?.phone || profile?.phone || '',
       whatsapp: clinicRecord?.whatsapp_number || profile?.whatsapp_number || '',
       metadata: { rejectionReason: clinicRecord?.rejection_reason }

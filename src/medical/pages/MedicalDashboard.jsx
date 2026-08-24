@@ -86,16 +86,20 @@ export default function MedicalDashboard() {
     let mounted = true;
     supabase
       .from('medicals')
-      .select('id, status, rejection_reason, name, city, state, pincode, image_url, phone, whatsapp_number')
+      .select('id, status, rejection_reason, name, city, state, phone, whatsapp_number, avatar_url')
       .eq('profile_id', profile.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.warn('[MedicalDashboard] medicals fetch error:', error.message);
         if (mounted) {
           setMedicalRecord(data);
           setMedicalStatusLoading(false);
         }
       })
-      .catch(() => { if (mounted) setMedicalStatusLoading(false); });
+      .catch((err) => {
+        console.warn('[MedicalDashboard] medicals fetch catch:', err.message);
+        if (mounted) setMedicalStatusLoading(false);
+      });
     return () => { mounted = false; };
   }, [profile?.id]);
 
@@ -462,11 +466,11 @@ export default function MedicalDashboard() {
     const pendingProfile = {
       ...profile,
       status: effectiveStatus,
-      center_name: medicalRecord?.name || profile?.center_name || '',
-      city: medicalRecord?.city || profile?.city || '',
-      state: medicalRecord?.state || profile?.state || '',
-      pincode: medicalRecord?.pincode || profile?.pincode || '',
-      avatar_url: medicalRecord?.image_url || profile?.avatar_url || null,
+      center_name: medicalRecord?.name || profile?.metadata?.center_name || '',
+      city: medicalRecord?.city || profile?.metadata?.city || '',
+      state: medicalRecord?.state || profile?.metadata?.state || '',
+      pincode: profile?.metadata?.pincode || '',
+      avatar_url: medicalRecord?.avatar_url || profile?.avatar_url || null,
       phone: medicalRecord?.phone || profile?.phone || '',
       whatsapp: medicalRecord?.whatsapp_number || profile?.whatsapp_number || '',
       metadata: { rejectionReason: medicalRecord?.rejection_reason }

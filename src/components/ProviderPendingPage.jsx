@@ -6,6 +6,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/auth/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase.js';
+
+// Maps profile_type to the correct provider table and dashboard route
+const PROVIDER_CONFIG = {
+    clinic:     { table: 'clinics',            dashboard: '/clinic/dashboard' },
+    medical:    { table: 'medicals',           dashboard: '/medical/dashboard' },
+    diagnostic: { table: 'diagnostic_centers', dashboard: '/diagnostic/dashboard' },
+    hospital:   { table: 'hospitals',          dashboard: '/hospital/dashboard' },
+};
 
 export default function ProviderPendingPage({ profile }) {
     const { signOut } = useAuth();
@@ -25,7 +35,11 @@ export default function ProviderPendingPage({ profile }) {
     const state = profile?.state || '';
     const pincode = profile?.pincode || '';
     const photoUrl = profile?.avatar_url || profile?.image_url || null;
-    const profileType = profile?.profile_type || profile?.type || 'Provider';
+    const profileType = (profile?.profile_type || profile?.type || '').toLowerCase();
+
+    const [checking, setChecking] = useState(false);
+    const pollingRef = useRef(null);
+    const channelRef = useRef(null);
 
     const formatType = (type) => {
         switch (type?.toLowerCase()) {
@@ -36,6 +50,143 @@ export default function ProviderPendingPage({ profile }) {
             default: return 'Healthcare Provider';
         }
     };
+
+    const getDashboardRoute = (type) => {
+        return PROVIDER_CONFIG[type?.toLowerCase()]?.dashboard || null;
+    };
+
+    const getProviderTable = (type) => {
+        return PROVIDER_CONFIG[type?.toLowerCase()]?.table || null;
+    };
+
+    /**
+     * Check if the facility has been approved in its provider table or profiles table.
+     * Redirects automatically if approved.
+     */
+    const checkApprovalStatus = async () => {
+        if (!profile?.id || isRejected) return;
+
+        const dashboardRoute = getDashboardRoute(profileType);
+        const table = getProviderTable(profileType);
+
+        if (!dashboardRoute) return;
+
+        try {
+            let approved = false;
+
+            // Check provider-specific table first
+            if (table) {
+                const { data: rec } = await supabase
+                    .from(table)
+                    .select('status')
+                    .eq('profile_id', profile.id)
+                    .maybeSingle();
+
+                if (rec) {
+                    const s = (rec.status || '').toLowerCase();
+                    approved = s === 'approved' || s === 'active';
+                }
+            }
+
+            // Fallback: check profiles table
+            if (!approved) {
+                const { data: prof } = await supabase
+                    .from('profiles')
+                    .select('status')
+                    .eq('id', profile.id)
+                    .maybeSingle();
+
+                if (prof) {
+                    const s = (prof.status || '').toLowerCase();
+                    approved = s === 'approved' || s === 'active';
+                }
+            }
+
+            if (approved) {
+                // Cleanup polling before navigating
+                clearInterval(pollingRef.current);
+                if (channelRef.current) {
+                    supabase.removeChannel(channelRef.current);
+                }
+                navigate(dashboardRoute, { replace: true });
+            }
+        } catch {
+            // Silently ignore errors; next poll will retry
+        }
+    };
+
+    // Manual "Check Again" button handler
+    const handleCheckAgain = async () => {
+        setChecking(true);
+        await checkApprovalStatus();
+        setChecking(false);
+    };
+
+    // Set up polling (every 30s) + real-time subscription on mount
+    useEffect(() => {
+        if (isRejected || !profile?.id) return;
+
+        const table = getProviderTable(profileType);
+        const dashboardRoute = getDashboardRoute(profileType);
+        if (!dashboardRoute) return;
+
+        // Initial check on mount
+        checkApprovalStatus();
+
+        // Poll every 30 seconds
+        pollingRef.current = setInterval(checkApprovalStatus, 30_000);
+
+        // Real-time subscription on provider table if available
+        if (table) {
+            const channel = supabase
+                .channel(`provider_status_${profile.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: table,
+                        filter: `profile_id=eq.${profile.id}`,
+                    },
+                    (payload) => {
+                        const newStatus = (payload.new?.status || '').toLowerCase();
+                        if (newStatus === 'approved' || newStatus === 'active') {
+                            clearInterval(pollingRef.current);
+                            supabase.removeChannel(channel);
+                            navigate(dashboardRoute, { replace: true });
+                        }
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'profiles',
+                        filter: `id=eq.${profile.id}`,
+                    },
+                    (payload) => {
+                        const newStatus = (payload.new?.status || '').toLowerCase();
+                        if (newStatus === 'active' || newStatus === 'approved') {
+                            clearInterval(pollingRef.current);
+                            supabase.removeChannel(channel);
+                            navigate(dashboardRoute, { replace: true });
+                        }
+                    }
+                )
+                .subscribe();
+
+            channelRef.current = channel;
+        }
+
+        return () => {
+            clearInterval(pollingRef.current);
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+            }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profile?.id, profileType, isRejected]);
 
     const handleTryAgain = async () => {
         await signOut();
@@ -123,6 +274,9 @@ export default function ProviderPendingPage({ profile }) {
                         </p>
                         <p className="text-xs text-slate-500 mt-2.5">
                             ⏱️ Review time is typically <span className="font-semibold text-teal-700">within 24–48 hours</span>. We may contact you on your registered phone if further documents are required.
+                        </p>
+                        <p className="text-[11px] text-teal-600 mt-2 font-medium">
+                            🔄 This page checks automatically every 30 seconds and will redirect you once approved.
                         </p>
                     </div>
                 )}
@@ -219,11 +373,12 @@ export default function ProviderPendingPage({ profile }) {
                         </button>
                     ) : (
                         <button
-                            onClick={() => window.location.reload()}
-                            className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-all text-sm cursor-pointer"
+                            onClick={handleCheckAgain}
+                            disabled={checking}
+                            className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white font-semibold transition-all text-sm cursor-pointer shadow-md shadow-teal-500/20"
                         >
-                            <RefreshCw size={15} />
-                            Check Approval Status
+                            <RefreshCw size={15} className={checking ? 'animate-spin' : ''} />
+                            {checking ? 'Checking…' : 'Check Approval Now'}
                         </button>
                     )}
 

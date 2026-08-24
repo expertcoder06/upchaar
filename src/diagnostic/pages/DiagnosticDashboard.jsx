@@ -100,16 +100,20 @@ export default function DiagnosticDashboard() {
         const checkStatus = () => {
             supabase
                 .from('diagnostic_centers')
-                .select('id, status, metadata, accepts_insurance, name, city, state, pincode, image_url, phone, whatsapp_number, rejection_reason')
+                .select('id, status, accepts_insurance, name, city, address, phone, whatsapp_number, avatar_url')
                 .eq('profile_id', profileId)
                 .maybeSingle()
-                .then(({ data }) => {
+                .then(({ data, error }) => {
+                    if (error) console.warn('[DiagnosticDashboard] fetch error:', error.message);
                     if (mounted) {
                         setDiagnosticRecord(data);
                         setDiagnosticStatusLoading(false);
                     }
                 })
-                .catch(() => { if (mounted) setDiagnosticStatusLoading(false); });
+                .catch((err) => {
+                    console.warn('[DiagnosticDashboard] fetch catch:', err.message);
+                    if (mounted) setDiagnosticStatusLoading(false);
+                });
         };
 
         checkStatus();
@@ -541,14 +545,14 @@ export default function DiagnosticDashboard() {
         const pendingProfile = {
             ...profile,
             status: statusRaw,
-            center_name: diagnosticRecord?.name || profile?.center_name || '',
-            city: diagnosticRecord?.city || profile?.city || '',
-            state: diagnosticRecord?.state || profile?.state || '',
-            pincode: diagnosticRecord?.pincode || profile?.pincode || '',
-            avatar_url: diagnosticRecord?.image_url || profile?.avatar_url || null,
+            center_name: diagnosticRecord?.name || profile?.metadata?.center_name || '',
+            city: diagnosticRecord?.city || profile?.metadata?.city || '',
+            state: profile?.metadata?.state || '',
+            pincode: profile?.metadata?.pincode || '',
+            avatar_url: diagnosticRecord?.avatar_url || profile?.avatar_url || null,
             phone: diagnosticRecord?.phone || profile?.phone || '',
             whatsapp: diagnosticRecord?.whatsapp_number || profile?.whatsapp_number || '',
-            metadata: { ...diagnosticRecord?.metadata, rejectionReason: diagnosticRecord?.rejection_reason || diagnosticRecord?.metadata?.rejectionReason }
+            metadata: { rejectionReason: profile?.metadata?.rejectionReason || '' }
         };
         return <ProviderPendingPage profile={pendingProfile} />;
     }
