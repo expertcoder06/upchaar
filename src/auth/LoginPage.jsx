@@ -181,17 +181,18 @@ export default function LoginPage() {
                     setError('Please enter a valid 6-digit PIN code.'); return;
                 }
 
-                if (signUpForm.centerPhoto) {
-                    const file = signUpForm.centerPhoto;
-                    const ext = file.name.split('.').pop();
-                    const path = `center_photos/${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
-                    const { error: uploadErr } = await supabase.storage
-                        .from('doctor-avtar')
-                        .upload(path, file, { upsert: true, contentType: file.type });
-                    if (!uploadErr) {
-                        const { data: { publicUrl } } = supabase.storage.from('doctor-avtar').getPublicUrl(path);
-                        centerPhotoUrl = publicUrl;
-                    }
+                if (!signUpForm.centerPhoto) {
+                    setError('Please upload a photo of your center.'); return;
+                }
+                const file = signUpForm.centerPhoto;
+                const ext = file.name.split('.').pop();
+                const path = `center_photos/${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
+                const { error: uploadErr } = await supabase.storage
+                    .from('doctor-avtar')
+                    .upload(path, file, { upsert: true, contentType: file.type });
+                if (!uploadErr) {
+                    const { data: { publicUrl } } = supabase.storage.from('doctor-avtar').getPublicUrl(path);
+                    centerPhotoUrl = publicUrl;
                 }
             }
 
@@ -622,7 +623,7 @@ export default function LoginPage() {
 
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                                                        Upload Photo of Your Center <span className="text-slate-400 font-normal">(optional)</span>
+                                                        Upload Photo of Your Center <span className="text-red-500">*</span>
                                                     </label>
                                                     <input
                                                         type="file"

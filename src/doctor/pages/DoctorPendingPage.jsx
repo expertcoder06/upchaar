@@ -4,6 +4,7 @@
  * Shown when a doctor has registered (or logged in)
  * but their application has NOT yet been approved by
  * the super admin. Status is still 'Pending'.
+ * Auto-redirects to dashboard when admin approves.
  * ─────────────────────────────────────────────────
  */
 
@@ -11,14 +12,128 @@ import { motion } from 'framer-motion';
 import { Stethoscope, Clock, LogOut, XCircle, RefreshCw } from 'lucide-react';
 import { useDoctor } from '../context/DoctorContext.jsx';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase.js';
 
 export default function DoctorPendingPage() {
     const { logout, doctorRecord } = useDoctor();
     const navigate = useNavigate();
+    const [checking, setChecking] = useState(false);
+    const pollingRef = useRef(null);
+    const channelRef = useRef(null);
 
     const isRejected = doctorRecord?.status === 'Rejected';
     const rejectReason = doctorRecord?.rejection_reason || doctorRecord?.rejectionReason;
+
+    /**
+     * Poll the doctors / pending_doctors tables to detect admin approval.
+     * Navigates to the doctor dashboard if status becomes 'Approved'.
+     */
+    const checkApprovalStatus = async () => {
+        if (!doctorRecord || isRejected) return;
+        try {
+            // Check approved doctors table
+            if (doctorRecord.id) {
+                const { data: approvedDoc } = await supabase
+                    .from('doctors')
+                    .select('id, status')
+                    .eq('id', doctorRecord.id)
+                    .maybeSingle();
+
+                if (approvedDoc && (approvedDoc.status === 'Approved' || approvedDoc.status === 'active')) {
+                    clearInterval(pollingRef.current);
+                    if (channelRef.current) supabase.removeChannel(channelRef.current);
+                    navigate('/doctor/dashboard', { replace: true });
+                    return;
+                }
+            }
+
+            // Fallback: check pending_doctors table for status change
+            if (doctorRecord.id) {
+                const { data: pendingDoc } = await supabase
+                    .from('pending_doctors')
+                    .select('id, status')
+                    .eq('id', doctorRecord.id)
+                    .maybeSingle();
+
+                if (!pendingDoc) {
+                    // Row was removed from pending — might have been approved & moved
+                    const { data: movedDoc } = await supabase
+                        .from('doctors')
+                        .select('id, status')
+                        .eq('profile_id', doctorRecord.profile_id)
+                        .maybeSingle();
+                    if (movedDoc) {
+                        clearInterval(pollingRef.current);
+                        if (channelRef.current) supabase.removeChannel(channelRef.current);
+                        navigate('/doctor/dashboard', { replace: true });
+                    }
+                }
+            }
+        } catch {
+            // Silently retry on next interval
+        }
+    };
+
+    const handleCheckAgain = async () => {
+        setChecking(true);
+        await checkApprovalStatus();
+        setChecking(false);
+    };
+
+    useEffect(() => {
+        if (isRejected || !doctorRecord?.id) return;
+
+        // Check immediately on mount
+        checkApprovalStatus();
+
+        // Poll every 30 seconds
+        pollingRef.current = setInterval(checkApprovalStatus, 30_000);
+
+        // Real-time subscription on doctors table
+        const channel = supabase
+            .channel(`doctor_status_${doctorRecord.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'pending_doctors',
+                    filter: `id=eq.${doctorRecord.id}`,
+                },
+                (payload) => {
+                    const newStatus = payload.new?.status;
+                    if (newStatus === 'Approved' || newStatus === 'active') {
+                        clearInterval(pollingRef.current);
+                        supabase.removeChannel(channel);
+                        navigate('/doctor/dashboard', { replace: true });
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'doctors',
+                    filter: doctorRecord.profile_id ? `profile_id=eq.${doctorRecord.profile_id}` : undefined,
+                },
+                () => {
+                    clearInterval(pollingRef.current);
+                    supabase.removeChannel(channel);
+                    navigate('/doctor/dashboard', { replace: true });
+                }
+            )
+            .subscribe();
+
+        channelRef.current = channel;
+
+        return () => {
+            clearInterval(pollingRef.current);
+            if (channelRef.current) supabase.removeChannel(channelRef.current);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [doctorRecord?.id, isRejected]);
 
     const handleTryAgain = async () => {
         if (doctorRecord?.id) {
@@ -110,6 +225,9 @@ export default function DoctorPendingPage() {
                             <p className="text-slate-500 text-sm mt-3 leading-relaxed">
                                 Thanks for choosing us — welcome to the new era of healthcare. Our team typically reviews applications within <span className="font-semibold text-teal-600">2–3 business days</span>.
                             </p>
+                            <p className="text-xs text-teal-600 mt-2 font-medium">
+                                🔄 This page checks automatically every 30 seconds and will redirect you once approved.
+                            </p>
                         </div>
 
                         {/* Decorative steps */}
@@ -131,14 +249,26 @@ export default function DoctorPendingPage() {
                     </>
                 )}
 
-                {/* Sign out */}
-                <button
-                    onClick={logout}
-                    className="flex items-center gap-2 mx-auto text-sm text-slate-400 hover:text-red-500 transition-colors"
-                >
-                    <LogOut size={15} />
-                    Sign out
-                </button>
+                {/* Actions */}
+                <div className="flex flex-col items-center gap-3">
+                    {!isRejected && (
+                        <button
+                            onClick={handleCheckAgain}
+                            disabled={checking}
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-sm font-semibold transition-all shadow-md shadow-teal-500/20"
+                        >
+                            <RefreshCw size={15} className={checking ? 'animate-spin' : ''} />
+                            {checking ? 'Checking…' : 'Check Approval Now'}
+                        </button>
+                    )}
+                    <button
+                        onClick={logout}
+                        className="flex items-center gap-2 mx-auto text-sm text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                        <LogOut size={15} />
+                        Sign out
+                    </button>
+                </div>
             </motion.div>
         </div>
     );

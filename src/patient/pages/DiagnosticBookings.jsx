@@ -69,16 +69,20 @@ export default function DiagnosticDashboard() {
         let mounted = true;
         supabase
             .from('diagnostic_centers')
-            .select('id, status, metadata')
+            .select('id, status, name, city, phone, whatsapp_number, avatar_url')
             .eq('profile_id', profile.id)
             .maybeSingle()
-            .then(({ data }) => {
+            .then(({ data, error }) => {
+                if (error) console.warn('[DiagnosticDashboard] diagnostic_centers fetch error:', error.message);
                 if (mounted) {
                     setDiagnosticRecord(data);
                     setDiagnosticStatusLoading(false);
                 }
             })
-            .catch(() => { if (mounted) setDiagnosticStatusLoading(false); });
+            .catch((err) => {
+                console.warn('[DiagnosticDashboard] diagnostic_centers fetch catch:', err.message);
+                if (mounted) setDiagnosticStatusLoading(false);
+            });
         return () => { mounted = false; };
     }, [profile?.id]);
 
@@ -101,7 +105,16 @@ export default function DiagnosticDashboard() {
     // Read status from `diagnostic_centers` table — this is what admin updates.
     const diagnosticStatus = (diagnosticRecord?.status || 'Pending').toLowerCase();
     if (diagnosticStatus === 'pending' || diagnosticStatus === 'rejected' || diagnosticStatus === 'suspended') {
-        const pendingProfile = { ...profile, status: diagnosticRecord?.status || 'Pending', metadata: diagnosticRecord?.metadata };
+        const pendingProfile = {
+            ...profile,
+            status: diagnosticRecord?.status || 'Pending',
+            center_name: diagnosticRecord?.name || profile?.metadata?.center_name || '',
+            city: diagnosticRecord?.city || profile?.metadata?.city || '',
+            phone: diagnosticRecord?.phone || profile?.phone || '',
+            whatsapp_number: diagnosticRecord?.whatsapp_number || profile?.whatsapp_number || '',
+            avatar_url: diagnosticRecord?.avatar_url || profile?.avatar_url || null,
+            metadata: { rejectionReason: profile?.metadata?.rejectionReason || '' },
+        };
         return <ProviderPendingPage profile={pendingProfile} />;
     }
 
