@@ -100,7 +100,7 @@ export default function DiagnosticDashboard() {
         const checkStatus = () => {
             supabase
                 .from('diagnostic_centers')
-                .select('id, status, metadata, accepts_insurance')
+                .select('id, status, metadata, accepts_insurance, name, city, state, pincode, image_url, phone, whatsapp_number, rejection_reason')
                 .eq('profile_id', profileId)
                 .maybeSingle()
                 .then(({ data }) => {
@@ -538,7 +538,18 @@ export default function DiagnosticDashboard() {
     const isApproved = statusLower === 'active' || statusLower === 'approved';
 
     if (!isApproved) {
-        const pendingProfile = { ...profile, status: statusRaw, metadata: diagnosticRecord?.metadata };
+        const pendingProfile = {
+            ...profile,
+            status: statusRaw,
+            center_name: diagnosticRecord?.name || profile?.center_name || '',
+            city: diagnosticRecord?.city || profile?.city || '',
+            state: diagnosticRecord?.state || profile?.state || '',
+            pincode: diagnosticRecord?.pincode || profile?.pincode || '',
+            avatar_url: diagnosticRecord?.image_url || profile?.avatar_url || null,
+            phone: diagnosticRecord?.phone || profile?.phone || '',
+            whatsapp: diagnosticRecord?.whatsapp_number || profile?.whatsapp_number || '',
+            metadata: { ...diagnosticRecord?.metadata, rejectionReason: diagnosticRecord?.rejection_reason || diagnosticRecord?.metadata?.rejectionReason }
+        };
         return <ProviderPendingPage profile={pendingProfile} />;
     }
 

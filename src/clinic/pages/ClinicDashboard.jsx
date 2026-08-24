@@ -85,7 +85,7 @@ export default function ClinicDashboard() {
     let mounted = true;
     supabase
       .from('clinics')
-      .select('id, status, rejection_reason')
+      .select('id, status, rejection_reason, name, city, state, pincode, image_url, phone, whatsapp_number')
       .eq('profile_id', profile.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -449,10 +449,17 @@ export default function ClinicDashboard() {
   // Block access if clinic is not yet approved by admin.
   if (!isApproved) {
     const effectiveStatus = isRejected ? (profStatus || recStatus || 'Rejected') : 'Pending';
-    const pendingProfile = { 
-      ...profile, 
-      status: effectiveStatus, 
-      metadata: { rejectionReason: clinicRecord?.rejection_reason } 
+    const pendingProfile = {
+      ...profile,
+      status: effectiveStatus,
+      center_name: clinicRecord?.name || profile?.center_name || '',
+      city: clinicRecord?.city || profile?.city || '',
+      state: clinicRecord?.state || profile?.state || '',
+      pincode: clinicRecord?.pincode || profile?.pincode || '',
+      avatar_url: clinicRecord?.image_url || profile?.avatar_url || null,
+      phone: clinicRecord?.phone || profile?.phone || '',
+      whatsapp: clinicRecord?.whatsapp_number || profile?.whatsapp_number || '',
+      metadata: { rejectionReason: clinicRecord?.rejection_reason }
     };
     return <ProviderPendingPage profile={pendingProfile} />;
   }

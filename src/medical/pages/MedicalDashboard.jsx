@@ -86,7 +86,7 @@ export default function MedicalDashboard() {
     let mounted = true;
     supabase
       .from('medicals')
-      .select('id, status, rejection_reason')
+      .select('id, status, rejection_reason, name, city, state, pincode, image_url, phone, whatsapp_number')
       .eq('profile_id', profile.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -459,10 +459,17 @@ export default function MedicalDashboard() {
   // Block access if medical store is not yet approved by admin.
   if (!isApproved) {
     const effectiveStatus = isRejected ? (profStatus || recStatus || 'Rejected') : 'Pending';
-    const pendingProfile = { 
-      ...profile, 
-      status: effectiveStatus, 
-      metadata: { rejectionReason: medicalRecord?.rejection_reason } 
+    const pendingProfile = {
+      ...profile,
+      status: effectiveStatus,
+      center_name: medicalRecord?.name || profile?.center_name || '',
+      city: medicalRecord?.city || profile?.city || '',
+      state: medicalRecord?.state || profile?.state || '',
+      pincode: medicalRecord?.pincode || profile?.pincode || '',
+      avatar_url: medicalRecord?.image_url || profile?.avatar_url || null,
+      phone: medicalRecord?.phone || profile?.phone || '',
+      whatsapp: medicalRecord?.whatsapp_number || profile?.whatsapp_number || '',
+      metadata: { rejectionReason: medicalRecord?.rejection_reason }
     };
     return <ProviderPendingPage profile={pendingProfile} />;
   }
