@@ -273,8 +273,10 @@ export function AuthProvider({ children }) {
             }
 
             // Update profile with center details in metadata, avatar_url, and whatsapp_number
+            const centerTitle = (centerName || fullName || '').trim();
+            const isCenter = ['clinic', 'medical', 'diagnostic', 'hospital'].includes(profileType);
             const metadataObj = {
-                center_name: centerTitle,
+                center_name: isCenter ? centerTitle : (centerName?.trim() || ''),
                 city: city?.trim() || '',
                 state: state || '',
                 pincode: pincode?.trim() || '',

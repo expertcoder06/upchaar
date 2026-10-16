@@ -84,6 +84,18 @@
 
   <!-- Blog Posts (Dynamic) -->
   <url>
+    <loc>https://www.upcharhealth.in/blogs/how-to-cut-clinic-waiting-room-times-in-half-without-rushing-your-consultations</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.upcharhealth.in/blogs/how-to-get-more-patients-online-a-practical-guide-for-modern-clinics</loc>
+    <lastmod>2026-08-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.upcharhealth.in/blogs/happy-independence-day</loc>
     <lastmod>2026-08-15</lastmod>
     <changefreq>weekly</changefreq>
